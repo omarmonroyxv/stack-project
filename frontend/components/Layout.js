@@ -1,7 +1,7 @@
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { FiHome, FiCalendar, FiBookOpen, FiMenu, FiX } from 'react-icons/fi';
+import { FiHome, FiCalendar, FiBookOpen, FiMenu, FiX, FiActivity } from 'react-icons/fi';
 import { useState } from 'react';
 
 export default function Layout({ children, title, description }) {
@@ -11,9 +11,10 @@ export default function Layout({ children, title, description }) {
   const navigation = [
     { name: 'Inicio', href: '/', icon: FiHome },
     { name: 'En Vivo', href: '/live', icon: FiCalendar },
+    { name: 'Widgets', href: '/widgets', icon: FiActivity },
     { name: 'Blog', href: '/blog', icon: FiBookOpen }
   ];
-
+  
   const isActive = (path) => router.pathname === path;
 
   return (
