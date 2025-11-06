@@ -6,10 +6,12 @@ node_modules/
 # Testing
 /coverage
 
-# Production
-/build
+# Next.js
 /.next/
 /out/
+
+# Production
+/build
 dist/
 
 # Misc
@@ -45,3 +47,9 @@ logs
 
 # OS
 Thumbs.db
+
+# Cache
+.cache/
+frontend/.next/
+backend/node_modules/
+frontend/node_modules/
