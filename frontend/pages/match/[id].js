@@ -236,40 +236,85 @@ export default function MatchDetail() {
           )}
         </div>
 
-        {/* Estadísticas del Partido */}
-{match.statistics && match.statistics.length > 0 && (
+{/* Estadísticas del Partido - Mejoradas */}
+{fixture?.status?.short !== 'NS' && (
   <div className="mt-8">
     <h2 className="text-2xl font-bold mb-6">📊 Estadísticas del Partido</h2>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {match.statistics.map((teamStats, idx) => (
-        <div key={idx} className="card p-6">
-          <h3 className="text-xl font-bold mb-4 flex items-center">
-            {teamStats.team?.logo && (
-              <img src={teamStats.team.logo} alt={teamStats.team.name} className="w-8 h-8 mr-2" />
-            )}
-            {teamStats.team?.name}
-          </h3>
-          <div className="space-y-3">
-            {teamStats.statistics?.map((stat, i) => (
-              <div key={i}>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600">{stat.type}</span>
-                  <span className="font-semibold">{stat.value}</span>
-                </div>
-                {stat.value && typeof stat.value === 'number' && (
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-primary-600 h-2 rounded-full"
-                      style={{ width: `${Math.min(stat.value, 100)}%` }}
-                    ></div>
+    
+    {/* Si tiene estadísticas de la API */}
+    {match.statistics && match.statistics.length > 0 ? (
+      <div className="grid grid-cols-1 gap-6">
+        <div className="card p-6">
+          <div className="space-y-4">
+            {/* Combinar estadísticas de ambos equipos */}
+            {match.statistics[0]?.statistics?.map((stat, i) => {
+              const homeStat = stat;
+              const awayStat = match.statistics[1]?.statistics?.[i];
+              
+              // Convertir valores a números para comparación
+              const homeValue = typeof homeStat.value === 'string' ? 
+                parseInt(homeStat.value.replace('%', '')) : 
+                (homeStat.value || 0);
+              const awayValue = typeof awayStat?.value === 'string' ? 
+                parseInt(awayStat.value.replace('%', '')) : 
+                (awayStat?.value || 0);
+              
+              const total = homeValue + awayValue || 100;
+              const homePercent = total > 0 ? (homeValue / total) * 100 : 50;
+              
+              return (
+                <div key={i}>
+                  {/* Tipo de estadística */}
+                  <div className="text-center text-sm font-semibold text-gray-700 mb-2">
+                    {homeStat.type}
                   </div>
-                )}
-              </div>
-            ))}
+                  
+                  {/* Valores */}
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="font-bold text-primary-600">
+                      {homeStat.value || 0}
+                    </span>
+                    <span className="font-bold text-gray-600">
+                      {awayStat?.value || 0}
+                    </span>
+                  </div>
+                  
+                  {/* Barra de progreso */}
+                  <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                    <div className="flex h-full">
+                      <div 
+                        className="bg-primary-600 h-full"
+                        style={{ width: `${homePercent}%` }}
+                      ></div>
+                      <div 
+                        className="bg-gray-400 h-full"
+                        style={{ width: `${100 - homePercent}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  
+                  {/* Nombres de equipos */}
+                  <div className="flex justify-between text-xs text-gray-600 mt-1">
+                    <span>{teams?.home?.name}</span>
+                    <span>{teams?.away?.name}</span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
-      ))}
-    </div>
+      </div>
+    ) : (
+      /* Si NO tiene estadísticas */
+      <div className="card p-8 text-center">
+        <p className="text-gray-600 mb-4">
+          Las estadísticas detalladas estarán disponibles durante o después del partido.
+        </p>
+        <p className="text-sm text-gray-500">
+          💡 Las estadísticas completas requieren un plan premium de API-Sports
+        </p>
+      </div>
+    )}
   </div>
 )}
 
