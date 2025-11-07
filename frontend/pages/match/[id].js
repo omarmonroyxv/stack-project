@@ -236,6 +236,43 @@ export default function MatchDetail() {
           )}
         </div>
 
+        {/* Estadísticas del Partido */}
+{match.statistics && match.statistics.length > 0 && (
+  <div className="mt-8">
+    <h2 className="text-2xl font-bold mb-6">📊 Estadísticas del Partido</h2>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {match.statistics.map((teamStats, idx) => (
+        <div key={idx} className="card p-6">
+          <h3 className="text-xl font-bold mb-4 flex items-center">
+            {teamStats.team?.logo && (
+              <img src={teamStats.team.logo} alt={teamStats.team.name} className="w-8 h-8 mr-2" />
+            )}
+            {teamStats.team?.name}
+          </h3>
+          <div className="space-y-3">
+            {teamStats.statistics?.map((stat, i) => (
+              <div key={i}>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-600">{stat.type}</span>
+                  <span className="font-semibold">{stat.value}</span>
+                </div>
+                {stat.value && typeof stat.value === 'number' && (
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-primary-600 h-2 rounded-full"
+                      style={{ width: `${Math.min(stat.value, 100)}%` }}
+                    ></div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
         {/* Back Button */}
         <div className="mt-8 text-center">
           <button
