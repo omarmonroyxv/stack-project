@@ -125,7 +125,6 @@ const connectDB = async () => {
 
 // Inicializar servicios
 const initializeServices = async () => {
-  await cacheService.connect();
   console.log('✅ Servicios inicializados');
 };
 
