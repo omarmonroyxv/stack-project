@@ -15,8 +15,6 @@ import blogRoutes from './routes/blog.js';
 
 const app = express();
 
-import cors from 'cors';
-
 // CORS Configuration
 const allowedOrigins = process.env.NODE_ENV === 'production' 
   ? [
