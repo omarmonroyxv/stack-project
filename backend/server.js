@@ -15,6 +15,38 @@ import blogRoutes from './routes/blog.js';
 
 const app = express();
 
+import cors from 'cors';
+
+// CORS Configuration
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+  ? [
+      process.env.FRONTEND_URL,
+      'https://stack-frontend.onrender.com',
+      /\.onrender\.com$/  // Permite cualquier subdominio de onrender.com
+    ]
+  : ['http://localhost:3000'];
+
+app.use(cors({
+  origin: function(origin, callback) {
+    // Permitir requests sin origin (como Postman, curl, etc)
+    if (!origin) return callback(null, true);
+    
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (allowed instanceof RegExp) {
+        return allowed.test(origin);
+      }
+      return allowed === origin;
+    });
+    
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+
 // Middlewares de seguridad
 app.use(helmet());
 app.use(compression());

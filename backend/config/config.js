@@ -28,7 +28,7 @@ export const config = {
   },
   
   rateLimiting: {
-    maxRequestsPerHour: parseInt(process.env.MAX_REQUESTS_PER_HOUR) || 4,
+    maxRequestsPerHour: parseInt(process.env.MAX_REQUESTS_PER_HOUR) || 5,
     scrapingIntervalMinutes: parseInt(process.env.SCRAPING_INTERVAL_MINUTES) || 5
   },
   

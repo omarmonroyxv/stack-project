@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estadísticas del Partido - Stack</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background: #f3f4f6; 
+            padding: 20px; 
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: #1f2937; margin-bottom: 30px; text-align: center; }
+        .widget-container { 
+            background: white; 
+            border-radius: 8px; 
+            padding: 20px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+            margin-bottom: 30px; 
+        }
+        .back-button { 
+            display: inline-block; 
+            padding: 10px 20px; 
+            background: #3b82f6; 
+            color: white; 
+            text-decoration: none; 
+            border-radius: 6px; 
+            margin-bottom: 20px; 
+        }
+        .back-button:hover { background: #2563eb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="javascript:history.back()" class="back-button">← Volver</a>
+        
+        <h1>📊 Estadísticas del Partido</h1>
+
+        <div class="widget-container">
+            <api-sports-widget data-type="game"
+                data-game-id="1358447"
+                data-game-tab="statistics">
+            </api-sports-widget>
+            
+            <api-sports-widget data-type="config"
+                data-key="d5dd4592c5e9a6419634ab449d9a17dc"
+                data-sport="football"
+                data-lang="es"
+                data-theme="white"
+                data-show-errors="true">
+            </api-sports-widget>
+        </div>
+    </div>
+    
+    <script type="module" src="https://widgets.api-sports.io/2.0.3/widgets.js"></script>
+</body>
+</html>

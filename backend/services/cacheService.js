@@ -1,97 +1,97 @@
-import Redis from 'ioredis';
-import { config } from '../config/config.js';
+import { createClient } from 'redis';
 
 class CacheService {
   constructor() {
     this.client = null;
     this.isConnected = false;
+    this.initializeRedis();
   }
 
-  async connect() {
+  async initializeRedis() {
     try {
-      this.client = new Redis({
-        host: config.redis.host,
-        port: config.redis.port,
-        password: config.redis.password,
-        retryStrategy: (times) => {
-          const delay = Math.min(times * 50, 2000);
-          return delay;
+      const redisUrl = process.env.REDIS_URL;
+      
+      if (!redisUrl) {
+        console.log('⚠️ REDIS_URL no configurado - Cache deshabilitado');
+        return;
+      }
+
+      this.client = createClient({
+        url: redisUrl,
+        socket: {
+          reconnectStrategy: (retries) => {
+            if (retries > 10) {
+              console.error('❌ Redis: Máximo de reintentos alcanzado');
+              return new Error('Máximo de reintentos alcanzado');
+            }
+            return Math.min(retries * 100, 3000);
+          }
         }
       });
 
-      this.client.on('connect', () => {
-        console.log('✅ Redis conectado');
-        this.isConnected = true;
-      });
-
       this.client.on('error', (err) => {
-        console.error('❌ Error en Redis:', err.message);
+        console.error('❌ Redis error:', err.message);
         this.isConnected = false;
       });
 
-      return this.client;
+      this.client.on('connect', () => {
+        console.log('🔄 Conectando a Redis...');
+      });
+
+      this.client.on('ready', () => {
+        console.log('✅ Redis conectado correctamente');
+        this.isConnected = true;
+      });
+
+      this.client.on('disconnect', () => {
+        console.log('⚠️ Redis desconectado');
+        this.isConnected = false;
+      });
+
+      await this.client.connect();
     } catch (error) {
-      console.error('Error conectando a Redis:', error);
+      console.error('❌ Error inicializando Redis:', error.message);
       this.isConnected = false;
-      return null;
     }
   }
 
   async get(key) {
     if (!this.isConnected) return null;
-    
+
     try {
-      const data = await this.client.get(key);
-      return data ? JSON.parse(data) : null;
+      const value = await this.client.get(key);
+      return value ? JSON.parse(value) : null;
     } catch (error) {
-      console.error(`Error obteniendo cache ${key}:`, error);
+      console.error('Error obteniendo de cache:', error.message);
       return null;
     }
   }
 
-  async set(key, value, ttl = 300) {
+  async set(key, value, expirationInSeconds = 300) {
     if (!this.isConnected) return false;
-    
+
     try {
-      await this.client.setex(key, ttl, JSON.stringify(value));
+      await this.client.setEx(
+        key,
+        expirationInSeconds,
+        JSON.stringify(value)
+      );
       return true;
     } catch (error) {
-      console.error(`Error guardando cache ${key}:`, error);
+      console.error('Error guardando en cache:', error.message);
       return false;
     }
   }
 
-  async delete(key) {
+  async del(key) {
     if (!this.isConnected) return false;
-    
+
     try {
       await this.client.del(key);
       return true;
     } catch (error) {
-      console.error(`Error eliminando cache ${key}:`, error);
+      console.error('Error eliminando de cache:', error.message);
       return false;
-    }
-  }
-
-  async deletePattern(pattern) {
-    if (!this.isConnected) return false;
-    
-    try {
-      const keys = await this.client.keys(pattern);
-      if (keys.length > 0) {
-        await this.client.del(...keys);
-      }
-      return true;
-    } catch (error) {
-      console.error(`Error eliminando patrón ${pattern}:`, error);
-      return false;
-    }
-  }
-
-  async disconnect() {
-    if (this.client) {
-      await this.client.quit();
-      this.isConnected = false;
     }
   }
 }
