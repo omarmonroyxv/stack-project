@@ -52,7 +52,7 @@ class ApiSportsService {
   }
 
   // Obtener partidos en vivo
-  async getLiveMatches() {
+  async getLiveFixtures() {
     const cacheKey = 'live_matches';
     
     // Intentar obtener del cache primero
@@ -115,7 +115,7 @@ class ApiSportsService {
   }
 
   // Obtener ligas principales
-  async getMainLeagues() {
+  async getTopLeagues() {
     const cacheKey = 'main_leagues';
     
     const cached = await cacheService.get(cacheKey);
@@ -175,8 +175,8 @@ class ApiSportsService {
     return null;
   }
 
-  // Obtener estadísticas de requests
-  getStats() {
+  // Obtener estadísticas de requests (método corregido)
+  async getApiStats() {
     this.resetCounter();
     const remainingTime = Math.ceil((this.resetTime - Date.now()) / 60000);
     
@@ -184,7 +184,8 @@ class ApiSportsService {
       requestsUsed: this.requestCount,
       requestsRemaining: this.maxRequests - this.requestCount,
       maxRequests: this.maxRequests,
-      resetInMinutes: remainingTime
+      resetInMinutes: remainingTime,
+      timestamp: new Date().toISOString()
     };
   }
 }
