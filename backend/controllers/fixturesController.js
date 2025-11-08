@@ -1,4 +1,4 @@
-import fixturefixtureDataService from '../services/fixturefixtureDataService.js';
+import fixtureDataService from '../services/fixtureDataService.js';
 import centralBot from '../services/centralBotService.js';
 
 /**
@@ -9,7 +9,7 @@ import centralBot from '../services/centralBotService.js';
 // Obtener partidos en vivo
 const getLiveFixtures = async (req, res) => {
   try {
-    const result = await fixturefixtureDataService.getLiveFixtures();
+    const result = await fixtureDataService.getLiveFixtures();
     
     res.json({
       success: true,
@@ -27,7 +27,7 @@ const getLiveFixtures = async (req, res) => {
 // Obtener partidos del día
 const getTodayFixtures = async (req, res) => {
   try {
-    const result = await fixturefixtureDataService.getTodayFixtures();
+    const result = await fixtureDataService.getTodayFixtures();
     
     res.json({
       success: true,
@@ -46,7 +46,7 @@ const getTodayFixtures = async (req, res) => {
 const getFixtureById = async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await fixturefixtureDataService.getFixtureById(id);
+    const result = await fixtureDataService.getFixtureById(id);
     
     res.json({
       success: true,
@@ -64,7 +64,7 @@ const getFixtureById = async (req, res) => {
 // Obtener ligas principales
 const getTopLeagues = async (req, res) => {
   try {
-    const result = await fixturefixtureDataService.getTopLeagues();
+    const result = await fixtureDataService.getTopLeagues();
     
     res.json({
       success: true,
@@ -91,7 +91,7 @@ const getStandings = async (req, res) => {
       });
     }
 
-    const result = await fixturefixtureDataService.getStandings(league, season);
+    const result = await fixtureDataService.getStandings(league, season);
     
     res.json({
       success: true,
@@ -109,7 +109,7 @@ const getStandings = async (req, res) => {
 // Obtener estadísticas del sistema
 const getApiStats = async (req, res) => {
   try {
-    const systemStats = await fixturefixtureDataService.getSystemStats();
+    const systemStats = await fixtureDataService.getSystemStats();
     const botStats = centralBot.getStats();
     
     res.json({
@@ -131,7 +131,7 @@ const getApiStats = async (req, res) => {
 // Obtener frescura de los datos
 const getDataFreshness = async (req, res) => {
   try {
-    const freshness = await fixturefixtureDataService.getDataFreshness();
+    const freshness = await fixtureDataService.getDataFreshness();
     
     res.json({
       success: true,

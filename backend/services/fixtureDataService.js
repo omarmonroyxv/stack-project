@@ -1,9 +1,9 @@
 import Fixture from '../models/Fixture.js';
 import cacheService from './cacheService.js';
 
-class fixturefixtureDataService {
+class fixtureDataService {
   constructor() {
-    console.log('📖 fixturefixtureDataService: Solo lectura de MongoDB');
+    console.log('📖 fixtureDataService: Solo lectura de MongoDB');
   }
 
   /**
@@ -233,4 +233,4 @@ class fixturefixtureDataService {
   }
 }
 
-export default new fixturefixtureDataService();
+export default new fixtureDataService();
