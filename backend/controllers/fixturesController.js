@@ -179,7 +179,7 @@ class FixturesController {
   // Obtener estadísticas de uso de la API
   async getApiStats(req, res) {
     try {
-      const stats = apiSportsService.getStats();
+      const stats = await apiSportsService.getApiStats();
 
       res.json({
         success: true,
@@ -196,4 +196,11 @@ class FixturesController {
   }
 }
 
-export default new FixturesController();
+export default {
+  getLiveFixtures,
+  getTodayFixtures,
+  getFixtureById,
+  getTopLeagues,
+  getStandings,
+  getApiStats,  // ← ASEGÚRATE QUE ESTÉ AQUÍ
+};

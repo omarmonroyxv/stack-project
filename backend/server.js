@@ -70,12 +70,11 @@ app.use('/api/fixtures', fixturesRoutes);
 app.use('/api/blog', blogRoutes);
 
 // Ruta de health check
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: config.nodeEnv
+app.get('/', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Stack API funcionando',
+    timestamp: new Date().toISOString()
   });
 });
 
