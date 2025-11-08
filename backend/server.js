@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import mongoose from 'mongoose';
+import centralBot from './services/centralBotService.js';
 import cron from 'node-cron';
 
 import { config } from './config/config.js';
@@ -115,6 +116,16 @@ const connectDB = async () => {
     console.log('✅ MongoDB conectado');
   } catch (error) {
     console.error('❌ Error conectando a MongoDB:', error.message);
+    
+    mongoose.connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log('✅ MongoDB conectado');
+    
+    // 🤖 Iniciar bot central
+    centralBot.start();
+  })
+  .catch(err => console.error('❌ Error:', err));
+  
     // En desarrollo, continuar sin MongoDB
     if (config.nodeEnv === 'production') {
       process.exit(1);

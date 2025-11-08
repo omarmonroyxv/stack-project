@@ -10,5 +10,6 @@ router.get('/leagues', fixturesController.getTopLeagues);
 router.get('/standings', fixturesController.getStandings);
 router.get('/stats', fixturesController.getApiStats);
 router.get('/:id', fixturesController.getFixtureById); // Esta debe ir al final
+router.get('/freshness', fixturesController.getDataFreshness);
 
 export default router;

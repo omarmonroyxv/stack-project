@@ -1,31 +1,19 @@
-import apiSportsService from '../services/apiSportsService.js';
-import cacheService from '../services/cacheService.js';
+import fixturefixtureDataService from '../services/fixturefixtureDataService.js';
+import centralBot from '../services/centralBotService.js';
+
+/**
+ * IMPORTANTE: Este controller ya NO hace requests a la API
+ * Solo lee datos que el bot central actualizó en MongoDB
+ */
 
 // Obtener partidos en vivo
 const getLiveFixtures = async (req, res) => {
   try {
-    const cacheKey = 'live-fixtures';
-    
-    // Intentar obtener del cache
-    const cachedData = await cacheService.get(cacheKey);
-    if (cachedData) {
-      return res.json({
-        success: true,
-        cached: true,
-        data: cachedData
-      });
-    }
-
-    // Si no está en cache, obtener de la API
-    const fixtures = await apiSportsService.getLiveFixtures();
-    
-    // Guardar en cache por 2 minutos
-    await cacheService.set(cacheKey, fixtures, 120);
+    const result = await fixturefixtureDataService.getLiveFixtures();
     
     res.json({
       success: true,
-      cached: false,
-      data: fixtures
+      ...result
     });
   } catch (error) {
     console.error('Error obteniendo partidos en vivo:', error);
@@ -39,28 +27,11 @@ const getLiveFixtures = async (req, res) => {
 // Obtener partidos del día
 const getTodayFixtures = async (req, res) => {
   try {
-    const cacheKey = 'today-fixtures';
-    
-    // Intentar obtener del cache
-    const cachedData = await cacheService.get(cacheKey);
-    if (cachedData) {
-      return res.json({
-        success: true,
-        cached: true,
-        data: cachedData
-      });
-    }
-
-    // Si no está en cache, obtener de la API
-    const fixtures = await apiSportsService.getTodayFixtures();
-    
-    // Guardar en cache por 10 minutos
-    await cacheService.set(cacheKey, fixtures, 600);
+    const result = await fixturefixtureDataService.getTodayFixtures();
     
     res.json({
       success: true,
-      cached: false,
-      data: fixtures
+      ...result
     });
   } catch (error) {
     console.error('Error obteniendo partidos del día:', error);
@@ -75,28 +46,11 @@ const getTodayFixtures = async (req, res) => {
 const getFixtureById = async (req, res) => {
   try {
     const { id } = req.params;
-    const cacheKey = `fixture-${id}`;
-    
-    // Intentar obtener del cache
-    const cachedData = await cacheService.get(cacheKey);
-    if (cachedData) {
-      return res.json({
-        success: true,
-        cached: true,
-        data: cachedData
-      });
-    }
-
-    // Si no está en cache, obtener de la API
-    const fixture = await apiSportsService.getFixtureById(id);
-    
-    // Guardar en cache por 5 minutos
-    await cacheService.set(cacheKey, fixture, 300);
+    const result = await fixturefixtureDataService.getFixtureById(id);
     
     res.json({
       success: true,
-      cached: false,
-      data: fixture
+      ...result
     });
   } catch (error) {
     console.error('Error obteniendo partido:', error);
@@ -110,28 +64,11 @@ const getFixtureById = async (req, res) => {
 // Obtener ligas principales
 const getTopLeagues = async (req, res) => {
   try {
-    const cacheKey = 'top-leagues';
-    
-    // Intentar obtener del cache
-    const cachedData = await cacheService.get(cacheKey);
-    if (cachedData) {
-      return res.json({
-        success: true,
-        cached: true,
-        data: cachedData
-      });
-    }
-
-    // Si no está en cache, obtener de la API
-    const leagues = await apiSportsService.getTopLeagues();
-    
-    // Guardar en cache por 24 horas (las ligas no cambian frecuentemente)
-    await cacheService.set(cacheKey, leagues, 86400);
+    const result = await fixturefixtureDataService.getTopLeagues();
     
     res.json({
       success: true,
-      cached: false,
-      data: leagues
+      ...result
     });
   } catch (error) {
     console.error('Error obteniendo ligas:', error);
@@ -154,28 +91,11 @@ const getStandings = async (req, res) => {
       });
     }
 
-    const cacheKey = `standings-${league}-${season}`;
-    
-    // Intentar obtener del cache
-    const cachedData = await cacheService.get(cacheKey);
-    if (cachedData) {
-      return res.json({
-        success: true,
-        cached: true,
-        data: cachedData
-      });
-    }
-
-    // Si no está en cache, obtener de la API
-    const standings = await apiSportsService.getStandings(league, season);
-    
-    // Guardar en cache por 1 hora
-    await cacheService.set(cacheKey, standings, 3600);
+    const result = await fixturefixtureDataService.getStandings(league, season);
     
     res.json({
       success: true,
-      cached: false,
-      data: standings
+      ...result
     });
   } catch (error) {
     console.error('Error obteniendo tabla de posiciones:', error);
@@ -186,14 +106,18 @@ const getStandings = async (req, res) => {
   }
 };
 
-// Obtener estadísticas de uso de la API
+// Obtener estadísticas del sistema
 const getApiStats = async (req, res) => {
   try {
-    const stats = await apiSportsService.getApiStats();
+    const systemStats = await fixturefixtureDataService.getSystemStats();
+    const botStats = centralBot.getStats();
     
     res.json({
       success: true,
-      stats
+      system: systemStats,
+      bot: botStats,
+      architecture: 'Central Bot + Read Replicas',
+      message: 'Este servidor NO hace requests a la API. Solo lee datos pre-cargados.'
     });
   } catch (error) {
     console.error('Error obteniendo stats:', error);
@@ -204,11 +128,30 @@ const getApiStats = async (req, res) => {
   }
 };
 
+// Obtener frescura de los datos
+const getDataFreshness = async (req, res) => {
+  try {
+    const freshness = await fixturefixtureDataService.getDataFreshness();
+    
+    res.json({
+      success: true,
+      ...freshness
+    });
+  } catch (error) {
+    console.error('Error obteniendo freshness:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo información de actualización'
+    });
+  }
+};
+
 export default {
   getLiveFixtures,
   getTodayFixtures,
   getFixtureById,
   getTopLeagues,
   getStandings,
-  getApiStats
+  getApiStats,
+  getDataFreshness
 };
