@@ -21,13 +21,12 @@ const allowedOrigins = process.env.NODE_ENV === 'production'
   ? [
       process.env.FRONTEND_URL,
       'https://stack-frontend.onrender.com',
-      /\.onrender\.com$/  // Permite cualquier subdominio de onrender.com
+      /\.onrender\.com$/
     ]
   : ['http://localhost:3000'];
 
 app.use(cors({
   origin: function(origin, callback) {
-    // Permitir requests sin origin (como Postman, curl, etc)
     if (!origin) return callback(null, true);
     
     const isAllowed = allowedOrigins.some(allowed => {
@@ -49,15 +48,11 @@ app.use(cors({
 // Middlewares de seguridad
 app.use(helmet());
 app.use(compression());
-app.use(cors({
-  origin: config.cors.origin,
-  credentials: true
-}));
 
 // Rate limiting general
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // límite de requests
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: 'Demasiadas solicitudes desde esta IP, intenta de nuevo más tarde.'
 });
 app.use('/api/', limiter);
@@ -76,19 +71,6 @@ app.get('/', (req, res) => {
     success: true, 
     message: 'Stack API funcionando',
     timestamp: new Date().toISOString()
-  });
-});
-
-// Ruta raíz
-app.get('/', (req, res) => {
-  res.json({
-    message: 'Stack API - Resultados de fútbol en vivo',
-    version: '1.0.0',
-    endpoints: {
-      fixtures: '/api/fixtures',
-      blog: '/api/blog',
-      health: '/api/health'
-    }
   });
 });
 
@@ -114,18 +96,14 @@ const connectDB = async () => {
   try {
     await mongoose.connect(config.mongodb.uri);
     console.log('✅ MongoDB conectado');
+    
+    // 🤖 INICIAR BOT CENTRAL después de conectar a MongoDB
+    console.log('🤖 Iniciando bot central...');
+    centralBot.start();
+    
   } catch (error) {
     console.error('❌ Error conectando a MongoDB:', error.message);
     
-    mongoose.connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log('✅ MongoDB conectado');
-    
-    // 🤖 Iniciar bot central
-    centralBot.start();
-  })
-  .catch(err => console.error('❌ Error:', err));
-  
     // En desarrollo, continuar sin MongoDB
     if (config.nodeEnv === 'production') {
       process.exit(1);
@@ -140,7 +118,6 @@ const initializeServices = async () => {
 
 // Configurar cron jobs para scraping automático
 const setupCronJobs = () => {
-  // Scraping cada 5 minutos (puedes ajustar según necesites)
   const scrapingInterval = `*/${config.rateLimiting.scrapingIntervalMinutes} * * * *`;
   
   cron.schedule(scrapingInterval, async () => {
@@ -175,14 +152,12 @@ const startServer = async () => {
 // Manejo de señales de terminación
 process.on('SIGTERM', async () => {
   console.log('SIGTERM recibido. Cerrando servidor...');
-  await cacheService.disconnect();
   await mongoose.connection.close();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('\nSIGINT recibido. Cerrando servidor...');
-  await cacheService.disconnect();
   await mongoose.connection.close();
   process.exit(0);
 });
