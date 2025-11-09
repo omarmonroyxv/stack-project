@@ -13,13 +13,18 @@ const getLiveFixtures = async (req, res) => {
     
     res.json({
       success: true,
-      ...result
+      data: result.data || [],
+      source: result.source || 'unknown',
+      cached: result.cached || false,
+      lastUpdate: result.lastUpdate,
+      timestamp: result.timestamp
     });
   } catch (error) {
     console.error('Error obteniendo partidos en vivo:', error);
     res.status(500).json({
       success: false,
-      error: 'Error obteniendo partidos en vivo'
+      error: 'Error obteniendo partidos en vivo',
+      data: []
     });
   }
 };
@@ -31,13 +36,17 @@ const getTodayFixtures = async (req, res) => {
     
     res.json({
       success: true,
-      ...result
+      data: result.data || [],
+      source: result.source || 'unknown',
+      cached: result.cached || false,
+      lastUpdate: result.lastUpdate
     });
   } catch (error) {
     console.error('Error obteniendo partidos del día:', error);
     res.status(500).json({
       success: false,
-      error: 'Error obteniendo partidos del día'
+      error: 'Error obteniendo partidos del día',
+      data: []
     });
   }
 };
