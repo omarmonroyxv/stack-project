@@ -112,10 +112,16 @@ class CentralBotService {
    * Obtener partidos en vivo
    */
   async fetchLiveFixtures() {
-    console.log('📡 Obteniendo partidos en vivo...');
+    console.log('📡 Obteniendo partidos en vivo desde API-Sports...');
     const fixtures = await this.makeAPIRequest('/fixtures', { live: 'all' });
-    console.log(`✅ ${fixtures.length} partidos en vivo obtenidos`);
-    return fixtures;
+    
+    if (fixtures && fixtures.length > 0) {
+      console.log(`✅ ${fixtures.length} partidos en vivo obtenidos de API-Sports`);
+      return fixtures;
+    }
+    
+    console.log('⚠️ No hay partidos en vivo en este momento');
+    return [];
   }
 
   /**
