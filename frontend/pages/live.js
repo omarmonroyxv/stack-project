@@ -11,9 +11,11 @@ export default function Live() {
   const [dataSource, setDataSource] = useState('api');
   const [apiStats, setApiStats] = useState(null);
   const [filter, setFilter] = useState('all'); // 'all', 'live', 'scheduled'
-  const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [lastUpdate, setLastUpdate] = useState(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     fetchMatches();
     // Auto-refresh cada 30 segundos
     const interval = setInterval(() => {
@@ -72,7 +74,7 @@ export default function Live() {
             Partidos en Vivo
           </h1>
           <p className="text-gray-600">
-            Última actualización: {typeof window !== 'undefined' ? lastUpdate.toLocaleTimeString('es-MX') : ''}
+            Última actualización: {mounted && lastUpdate ? lastUpdate.toLocaleTimeString('es-MX') : 'Cargando...'}
           </p>
         </div>
 
