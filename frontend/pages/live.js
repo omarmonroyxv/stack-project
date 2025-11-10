@@ -89,7 +89,7 @@ export default function Live() {
                   ? 'bg-green-100 text-green-800' 
                   : 'bg-yellow-100 text-yellow-800'
               }`}>
-                {dataSource === 'api' ? 'API Sports' : 'Scraping'}
+                {dataSource === 'api' ? 'TheSportsDB' : 'Scraping'}
               </span>
             </div>
 
