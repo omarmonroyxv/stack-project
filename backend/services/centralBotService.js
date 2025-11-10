@@ -23,6 +23,8 @@ class CentralBotService {
   start() {
     console.log('🤖 Bot Central iniciado');
     console.log('📡 Actualizaciones cada 15 minutos');
+    console.log(`🔑 API Key configured: ${this.apiKey ? 'YES' : 'NO'}`);
+    console.log(`🔑 API Key (últimos 4): ...${this.apiKey ? this.apiKey.slice(-4) : 'N/A'}`);
 
     // Ejecutar inmediatamente al iniciar
     this.updateAllData();
@@ -68,9 +70,6 @@ class CentralBotService {
         await this.saveToDatabase('top_leagues', leagues);
       }
 
-      // 4️⃣ Actualizar tablas de posiciones (solo si cambió algo)
-      await this.updateStandingsIfNeeded();
-
       const duration = ((Date.now() - startTime) / 1000).toFixed(2);
       this.stats.totalUpdates++;
       this.stats.lastUpdate = new Date();
@@ -88,10 +87,15 @@ class CentralBotService {
   }
 
   /**
-   * Hacer request a API-Sports
+   * Hacer request a API-Sports CON LOGS DETALLADOS
    */
   async makeAPIRequest(endpoint, params = {}) {
     try {
+      console.log(`📡 Haciendo request a: ${this.baseUrl}${endpoint}`);
+      console.log(`📋 Params:`, JSON.stringify(params));
+      console.log(`🔑 API Key presente: ${this.apiKey ? 'SÍ' : 'NO'}`);
+      console.log(`🔑 Host: ${this.host}`);
+      
       const response = await axios.get(`${this.baseUrl}${endpoint}`, {
         headers: {
           'x-rapidapi-key': this.apiKey,
@@ -101,9 +105,34 @@ class CentralBotService {
         timeout: 15000
       });
 
+      console.log(`✅ Response status: ${response.status}`);
+      console.log(`📦 Response data exists: ${response.data ? 'YES' : 'NO'}`);
+      console.log(`📦 Response.response length: ${response.data?.response?.length || 0}`);
+      console.log(`📦 Response.results: ${response.data?.results || 0}`);
+
+      // Verificar si hay errores en la respuesta
+      if (response.data?.errors && Object.keys(response.data.errors).length > 0) {
+        console.error('❌ API Errors:', JSON.stringify(response.data.errors));
+      }
+
+      // Verificar si la API devolvió mensaje
+      if (response.data?.message) {
+        console.log(`💬 API Message: ${response.data.message}`);
+      }
+
+      // Log completo de la respuesta para debugging
+      console.log(`📄 Full response:`, JSON.stringify(response.data, null, 2).substring(0, 500));
+
       return response.data?.response || [];
     } catch (error) {
       console.error(`❌ Error API (${endpoint}):`, error.message);
+      if (error.response) {
+        console.error('❌ Response status:', error.response.status);
+        console.error('❌ Response data:', JSON.stringify(error.response.data));
+      }
+      if (error.code) {
+        console.error('❌ Error code:', error.code);
+      }
       return [];
     }
   }
@@ -115,8 +144,12 @@ class CentralBotService {
     console.log('📡 Obteniendo partidos en vivo desde API-Sports...');
     const fixtures = await this.makeAPIRequest('/fixtures', { live: 'all' });
     
+    console.log(`📊 Fixtures recibidos: ${fixtures.length}`);
+    
     if (fixtures && fixtures.length > 0) {
       console.log(`✅ ${fixtures.length} partidos en vivo obtenidos de API-Sports`);
+      // Log del primer partido para verificar estructura
+      console.log(`📝 Primer partido (sample):`, JSON.stringify(fixtures[0], null, 2).substring(0, 300));
       return fixtures;
     }
     
@@ -132,6 +165,11 @@ class CentralBotService {
     console.log(`📡 Obteniendo partidos del ${today}...`);
     const fixtures = await this.makeAPIRequest('/fixtures', { date: today });
     console.log(`✅ ${fixtures.length} partidos del día obtenidos`);
+    
+    if (fixtures.length > 0) {
+      console.log(`📝 Primer partido del día (sample):`, JSON.stringify(fixtures[0]?.league?.name || 'N/A'));
+    }
+    
     return fixtures;
   }
 
@@ -153,25 +191,6 @@ class CentralBotService {
   }
 
   /**
-   * Actualizar tablas de posiciones
-   */
-  async updateStandingsIfNeeded() {
-    const mainLeagueIds = [39, 140, 135, 78, 61];
-    const season = new Date().getFullYear();
-    
-    for (const leagueId of mainLeagueIds) {
-      const standings = await this.makeAPIRequest('/standings', {
-        league: leagueId,
-        season: season
-      });
-      
-      if (standings.length > 0) {
-        await this.saveToDatabase(`standings_${leagueId}_${season}`, standings[0]);
-      }
-    }
-  }
-
-  /**
    * Guardar datos en MongoDB
    */
   async saveToDatabase(key, data) {
@@ -185,7 +204,7 @@ class CentralBotService {
         },
         { upsert: true, new: true }
       );
-      console.log(`💾 Guardado: ${key}`);
+      console.log(`💾 Guardado: ${key} (${data.length} items)`);
     } catch (error) {
       console.error(`❌ Error guardando ${key}:`, error.message);
     }
@@ -208,10 +227,8 @@ class CentralBotService {
   async fullDatabaseRefresh() {
     console.log('🌙 Iniciando actualización completa...');
     
-    // Actualizar todo de forma completa
     await this.updateAllData();
     
-    // Limpiar datos antiguos (más de 7 días)
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     await Fixture.deleteMany({ updatedAt: { $lt: sevenDaysAgo } });
     
@@ -226,7 +243,7 @@ class CentralBotService {
       ...this.stats,
       isRunning: this.isRunning,
       nextUpdate: this.getNextUpdateTime(),
-      requestsPerDay: 96 // 4 requests cada 15 min × 24 horas
+      requestsPerDay: 96
     };
   }
 
