@@ -1,9 +1,8 @@
 import fixtureDataService from '../services/fixtureDataService.js';
-import centralBot from '../services/centralBotService.js';
+import theSportsDBService from '../services/theSportsDBService.js';
 
 /**
- * IMPORTANTE: Este controller ya NO hace requests a la API
- * Solo lee datos que el bot central actualizó en MongoDB
+ * Controller actualizado para TheSportsDB
  */
 
 // Obtener partidos en vivo
@@ -14,7 +13,7 @@ const getLiveFixtures = async (req, res) => {
     res.json({
       success: true,
       data: result.data || [],
-      source: result.source || 'unknown',
+      source: result.source || 'thesportsdb',
       cached: result.cached || false,
       lastUpdate: result.lastUpdate,
       timestamp: result.timestamp
@@ -37,7 +36,7 @@ const getTodayFixtures = async (req, res) => {
     res.json({
       success: true,
       data: result.data || [],
-      source: result.source || 'unknown',
+      source: result.source || 'thesportsdb',
       cached: result.cached || false,
       lastUpdate: result.lastUpdate
     });
@@ -119,14 +118,20 @@ const getStandings = async (req, res) => {
 const getApiStats = async (req, res) => {
   try {
     const systemStats = await fixtureDataService.getSystemStats();
-    const botStats = centralBot.getStats();
+    const botStats = theSportsDBService.getStats();
     
     res.json({
       success: true,
       system: systemStats,
       bot: botStats,
-      architecture: 'Central Bot + Read Replicas',
-      message: 'Este servidor NO hace requests a la API. Solo lee datos pre-cargados.'
+      service: 'TheSportsDB',
+      limits: {
+        requestsPerMinute: 30,
+        requestsPerDay: 43200,
+        resetInterval: '60 seconds'
+      },
+      architecture: 'TheSportsDB Bot + MongoDB Cache',
+      message: 'Usando TheSportsDB - 30 requests/minuto'
     });
   } catch (error) {
     console.error('Error obteniendo stats:', error);
@@ -144,7 +149,8 @@ const getDataFreshness = async (req, res) => {
     
     res.json({
       success: true,
-      ...freshness
+      ...freshness,
+      service: 'TheSportsDB'
     });
   } catch (error) {
     console.error('Error obteniendo freshness:', error);

@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import mongoose from 'mongoose';
-import centralBot from './services/centralBotService.js';
+import theSportsDBService from './services/theSportsDBService.js';
 import cron from 'node-cron';
 
 import { config } from './config/config.js';
@@ -15,6 +15,9 @@ import fixturesRoutes from './routes/fixtures.js';
 import blogRoutes from './routes/blog.js';
 
 const app = express();
+
+// Trust proxy for Render
+app.set('trust proxy', 1);
 
 // CORS Configuration
 const allowedOrigins = process.env.NODE_ENV === 'production' 
@@ -69,7 +72,7 @@ app.use('/api/blog', blogRoutes);
 app.get('/', (req, res) => {
   res.json({ 
     success: true, 
-    message: 'Stack API funcionando',
+    message: 'Stack API funcionando con TheSportsDB',
     timestamp: new Date().toISOString()
   });
 });
@@ -97,14 +100,13 @@ const connectDB = async () => {
     await mongoose.connect(config.mongodb.uri);
     console.log('✅ MongoDB conectado');
     
-    // 🤖 INICIAR BOT CENTRAL después de conectar a MongoDB
-    console.log('🤖 Iniciando bot central...');
-    centralBot.start();
+    // 🎾 INICIAR THESPORTSDB BOT
+    console.log('🎾 Iniciando TheSportsDB bot...');
+    theSportsDBService.start();
     
   } catch (error) {
     console.error('❌ Error conectando a MongoDB:', error.message);
     
-    // En desarrollo, continuar sin MongoDB
     if (config.nodeEnv === 'production') {
       process.exit(1);
     }
@@ -139,6 +141,7 @@ const startServer = async () => {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log(`🚀 Stack API corriendo en puerto ${config.port}`);
       console.log(`📍 Entorno: ${config.nodeEnv}`);
+      console.log(`🎾 Usando TheSportsDB API (30 req/min)`);
       console.log(`🌐 URL: http://localhost:${config.port}`);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     });

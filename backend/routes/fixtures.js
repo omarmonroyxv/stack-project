@@ -1,6 +1,6 @@
 import express from 'express';
 import fixturesController from '../controllers/fixturesController.js';
-import centralBot from '../services/centralBotService.js';
+import theSportsDBService from '../services/theSportsDBService.js';
 
 const router = express.Router();
 
@@ -13,15 +13,15 @@ router.get('/stats', fixturesController.getApiStats);
 router.get('/freshness', fixturesController.getDataFreshness);
 router.get('/:id', fixturesController.getFixtureById);
 
-// 🔥 NUEVO: Endpoint para forzar actualización del bot
+// 🔥 Endpoint para forzar actualización del bot
 router.post('/force-update', async (req, res) => {
   try {
     console.log('🔥 Actualización manual forzada');
-    await centralBot.updateAllData();
+    await theSportsDBService.updateAllData();
     
     res.json({
       success: true,
-      message: 'Actualización completada',
+      message: 'Actualización completada con TheSportsDB',
       timestamp: new Date()
     });
   } catch (error) {
@@ -35,9 +35,10 @@ router.post('/force-update', async (req, res) => {
 
 // Endpoint para obtener stats del bot
 router.get('/bot-stats', (req, res) => {
-  const stats = centralBot.getStats();
+  const stats = theSportsDBService.getStats();
   res.json({
     success: true,
+    service: 'TheSportsDB',
     ...stats
   });
 });
