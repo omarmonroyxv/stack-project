@@ -25,6 +25,7 @@ class CentralBotService {
     console.log('📡 Actualizaciones cada 15 minutos');
     console.log(`🔑 API Key configured: ${this.apiKey ? 'YES' : 'NO'}`);
     console.log(`🔑 API Key (últimos 4): ...${this.apiKey ? this.apiKey.slice(-4) : 'N/A'}`);
+    console.log(`🏠 API Host: ${this.host}`);
 
     // Ejecutar inmediatamente al iniciar
     this.updateAllData();
@@ -87,19 +88,18 @@ class CentralBotService {
   }
 
   /**
-   * Hacer request a API-Sports CON LOGS DETALLADOS
+   * Hacer request a API-Football via RapidAPI CON LOGS DETALLADOS
    */
   async makeAPIRequest(endpoint, params = {}) {
     try {
       console.log(`📡 Haciendo request a: ${this.baseUrl}${endpoint}`);
       console.log(`📋 Params:`, JSON.stringify(params));
       console.log(`🔑 API Key presente: ${this.apiKey ? 'SÍ' : 'NO'}`);
-      console.log(`🔑 Host: ${this.host}`);
+      console.log(`🏠 Host: ${this.host}`);
       
       const response = await axios.get(`${this.baseUrl}${endpoint}`, {
         headers: {
-          'x-rapidapi-key': this.apiKey,
-          'x-rapidapi-host': this.host
+          'x-apisports-key': this.apiKey
         },
         params,
         timeout: 15000
@@ -141,13 +141,13 @@ class CentralBotService {
    * Obtener partidos en vivo
    */
   async fetchLiveFixtures() {
-    console.log('📡 Obteniendo partidos en vivo desde API-Sports...');
+    console.log('📡 Obteniendo partidos en vivo desde API-Football...');
     const fixtures = await this.makeAPIRequest('/fixtures', { live: 'all' });
     
     console.log(`📊 Fixtures recibidos: ${fixtures.length}`);
     
     if (fixtures && fixtures.length > 0) {
-      console.log(`✅ ${fixtures.length} partidos en vivo obtenidos de API-Sports`);
+      console.log(`✅ ${fixtures.length} partidos en vivo obtenidos de API-Football`);
       // Log del primer partido para verificar estructura
       console.log(`📝 Primer partido (sample):`, JSON.stringify(fixtures[0], null, 2).substring(0, 300));
       return fixtures;

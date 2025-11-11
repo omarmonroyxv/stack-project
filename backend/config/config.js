@@ -6,8 +6,8 @@ export const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
   
   apiSports: {
-    key: process.env.API_SPORTS_KEY,
-    host: process.env.API_SPORTS_HOST || 'v3.football.api-sports.io',
+    key: process.env.APISPORTS_KEY,
+    host: 'v3.football.api-sports.io',
     baseUrl: 'https://v3.football.api-sports.io'
   },
   
