@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import mongoose from 'mongoose';
-import theSportsDBService from './services/theSportsDBService.js';
+import centralBotService from './services/centralBotService.js';
 import cron from 'node-cron';
 
 import { config } from './config/config.js';
@@ -72,7 +72,7 @@ app.use('/api/blog', blogRoutes);
 app.get('/', (req, res) => {
   res.json({ 
     success: true, 
-    message: 'Stack API funcionando con TheSportsDB',
+    message: 'Stack API funcionando con API-Sports',
     timestamp: new Date().toISOString()
   });
 });
@@ -100,9 +100,9 @@ const connectDB = async () => {
     await mongoose.connect(config.mongodb.uri);
     console.log('✅ MongoDB conectado');
     
-    // 🎾 INICIAR THESPORTSDB BOT
-    console.log('🎾 Iniciando TheSportsDB bot...');
-    theSportsDBService.start();
+    // 🤖 INICIAR API-SPORTS BOT CENTRAL
+    console.log('🤖 Iniciando API-Sports Bot Central...');
+    centralBotService.start();
     
   } catch (error) {
     console.error('❌ Error conectando a MongoDB:', error.message);
@@ -141,7 +141,7 @@ const startServer = async () => {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log(`🚀 Stack API corriendo en puerto ${config.port}`);
       console.log(`📍 Entorno: ${config.nodeEnv}`);
-      console.log(`🎾 Usando TheSportsDB API (30 req/min)`);
+      console.log(`⚽ Usando API-Sports (100 req/día)`);
       console.log(`🌐 URL: http://localhost:${config.port}`);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     });
