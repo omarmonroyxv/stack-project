@@ -4,7 +4,6 @@ import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import mongoose from 'mongoose';
-import scrapingService from './services/scrapingService.js';
 import cron from 'node-cron';
 
 import { config } from './config/config.js';
@@ -118,24 +117,11 @@ const initializeServices = async () => {
   console.log('✅ Servicios inicializados');
 };
 
-// Configurar cron jobs para scraping automático
-const setupCronJobs = () => {
-  const scrapingInterval = `*/${config.rateLimiting.scrapingIntervalMinutes} * * * *`;
-  
-  cron.schedule(scrapingInterval, async () => {
-    console.log('🕷️ Ejecutando scraping programado...');
-    await scrapingService.getScrapedMatches();
-  });
-
-  console.log(`✅ Cron job configurado: scraping cada ${config.rateLimiting.scrapingIntervalMinutes} minutos`);
-};
-
 // Iniciar servidor
 const startServer = async () => {
   try {
     await connectDB();
     await initializeServices();
-    setupCronJobs();
 
     app.listen(config.port, () => {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
