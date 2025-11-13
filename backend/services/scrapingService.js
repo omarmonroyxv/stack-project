@@ -1,164 +1,461 @@
-import axios from 'axios';
-import * as cheerio from 'cheerio';
-import cacheService from './cacheService.js';
+import puppeteer from 'puppeteer';
+import cron from 'node-cron';
+import Fixture from '../models/Fixture.js';
 
-class ScrapingService {
+class scrapingService {
   constructor() {
-    this.sources = {
-      flashscore: 'https://www.flashscore.com',
-      livescore: 'https://www.livescore.com'
+    this.baseUrl = 'https://m.aiscore.com/es';
+    this.isRunning = false;
+    this.browser = null;
+    this.stats = {
+      totalUpdates: 0,
+      lastUpdate: null,
+      lastError: null,
+      fixturesUpdated: 0
     };
   }
 
-  // Scraping de FlashScore (ejemplo - necesitarás adaptar los selectores)
-  async scrapeFlashScore() {
+  /**
+   * Iniciar el bot de scraping
+   */
+  start() {
+    console.log('🕷️ Scraping Bot iniciado');
+    console.log('📡 Actualizaciones cada 10 minutos');
+
+    // Ejecutar inmediatamente
+    this.updateAllData();
+
+    // Cron: cada 10 minutos
+    cron.schedule('*/10 * * * *', () => {
+      this.updateAllData();
+    });
+
+    // Actualización nocturna completa (3 AM)
+    cron.schedule('0 3 * * *', () => {
+      console.log('🌙 Actualización nocturna completa');
+      this.fullDatabaseRefresh();
+    });
+  }
+
+  /**
+   * Inicializar navegador Puppeteer
+   */
+  async initBrowser() {
+    if (this.browser) {
+      return this.browser;
+    }
+
     try {
-      console.log('🕷️ Iniciando scraping de FlashScore...');
+      this.browser = await puppeteer.launch({
+        headless: 'new',
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--window-size=375,812'
+        ]
+      });
       
-      const response = await axios.get(this.sources.flashscore, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8'
-        },
-        timeout: 10000
-      });
-
-      const $ = cheerio.load(response.data);
-      const matches = [];
-
-      // NOTA: Estos selectores son ejemplos y necesitan ser ajustados
-      // según la estructura real del sitio
-      $('.event__match').each((i, element) => {
-        const homeTeam = $(element).find('.event__participant--home').text().trim();
-        const awayTeam = $(element).find('.event__participant--away').text().trim();
-        const score = $(element).find('.event__score').text().trim();
-        const time = $(element).find('.event__time').text().trim();
-        const status = $(element).find('.event__stage').text().trim();
-
-        if (homeTeam && awayTeam) {
-          matches.push({
-            homeTeam,
-            awayTeam,
-            score,
-            time,
-            status,
-            source: 'flashscore',
-            scrapedAt: new Date().toISOString()
-          });
-        }
-      });
-
-      console.log(`✅ Scraped ${matches.length} partidos de FlashScore`);
-      return matches;
-
+      console.log('✅ Navegador Puppeteer iniciado');
+      return this.browser;
     } catch (error) {
-      console.error('Error scrapeando FlashScore:', error.message);
-      return [];
+      console.error('❌ Error iniciando navegador:', error.message);
+      return null;
     }
   }
 
-  // Scraping de LiveScore (backup)
-  async scrapeLiveScore() {
+  /**
+   * Actualizar todos los datos
+   */
+  async updateAllData() {
+    if (this.isRunning) {
+      console.log('⏳ Actualización anterior aún en progreso...');
+      return;
+    }
+
+    this.isRunning = true;
+    const startTime = Date.now();
+
     try {
-      console.log('🕷️ Iniciando scraping de LiveScore...');
+      console.log('🔄 [SCRAPING] Iniciando actualización...');
+
+      const browser = await this.initBrowser();
+      if (!browser) {
+        throw new Error('No se pudo iniciar el navegador');
+      }
+
+      // Scraping de partidos
+      const matches = await this.scrapeMatches(browser);
       
-      const response = await axios.get(this.sources.livescore, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        },
-        timeout: 10000
-      });
+      // Guardar en MongoDB
+      await this.saveToDatabase('live_fixtures', matches.live);
+      await this.saveToDatabase('today_fixtures', matches.today);
 
-      const $ = cheerio.load(response.data);
-      const matches = [];
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      this.stats.totalUpdates++;
+      this.stats.lastUpdate = new Date();
+      this.stats.fixturesUpdated = matches.live.length + matches.today.length;
 
-      // NOTA: Ajusta estos selectores según la estructura real
-      $('.match-row').each((i, element) => {
-        const homeTeam = $(element).find('.home-team').text().trim();
-        const awayTeam = $(element).find('.away-team').text().trim();
-        const homeScore = $(element).find('.home-score').text().trim();
-        const awayScore = $(element).find('.away-score').text().trim();
-        const status = $(element).find('.match-status').text().trim();
-
-        if (homeTeam && awayTeam) {
-          matches.push({
-            homeTeam,
-            awayTeam,
-            score: `${homeScore} - ${awayScore}`,
-            status,
-            source: 'livescore',
-            scrapedAt: new Date().toISOString()
-          });
-        }
-      });
-
-      console.log(`✅ Scraped ${matches.length} partidos de LiveScore`);
-      return matches;
+      console.log(`✅ [SCRAPING] Actualización completa en ${duration}s`);
+      console.log(`📊 Partidos actualizados: ${this.stats.fixturesUpdated}`);
 
     } catch (error) {
-      console.error('Error scrapeando LiveScore:', error.message);
-      return [];
+      console.error('❌ [SCRAPING] Error:', error.message);
+      this.stats.lastError = error.message;
+    } finally {
+      this.isRunning = false;
     }
   }
 
-  // Método principal que intenta múltiples fuentes
-  async getScrapedMatches() {
-    const cacheKey = 'scraped_matches';
+  /**
+   * Scraping de partidos desde aiscore
+   */
+  async scrapeMatches(browser) {
+    const page = await browser.newPage();
     
-    // Verificar cache
-    const cached = await cacheService.get(cacheKey);
-    if (cached) {
-      console.log('📦 Matches scrapeados desde cache');
-      return cached;
+    try {
+      console.log('📡 Navegando a aiscore...');
+      
+      // Configurar user agent móvil
+      await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15');
+      
+      // Ir a la página
+      await page.goto(this.baseUrl, {
+        waitUntil: 'networkidle2',
+        timeout: 30000
+      });
+
+      console.log('⏳ Esperando carga completa...');
+      await page.waitForTimeout(8000);
+
+      // Scroll para cargar más contenido
+      await this.autoScroll(page);
+
+      console.log('🔍 Extrayendo partidos...');
+
+      // Extraer todos los enlaces de partidos
+      const matchLinks = await page.evaluate(() => {
+        const links = Array.from(document.querySelectorAll('a[href*="/match-"]'));
+        return links.map(link => ({
+          url: link.href,
+          text: link.innerText
+        }));
+      });
+
+      console.log(`📊 Encontrados ${matchLinks.length} partidos`);
+
+      // Procesar enlaces y extraer datos
+      const allMatches = await this.processMatchLinks(matchLinks, page);
+
+      // Separar en vivo y del día
+      const liveMatches = allMatches.filter(m => this.isLive(m));
+      const todayMatches = allMatches.filter(m => !this.isLive(m));
+
+      console.log(`🔴 En vivo: ${liveMatches.length}`);
+      console.log(`📅 Hoy: ${todayMatches.length}`);
+
+      await page.close();
+
+      return {
+        live: liveMatches,
+        today: todayMatches
+      };
+
+    } catch (error) {
+      console.error('❌ Error en scraping:', error.message);
+      await page.close();
+      return { live: [], today: [] };
     }
+  }
 
-    // Intentar scraping de múltiples fuentes
-    let matches = [];
+  /**
+   * Auto scroll en la página
+   */
+  async autoScroll(page) {
+    await page.evaluate(async () => {
+      await new Promise((resolve) => {
+        let totalHeight = 0;
+        const distance = 100;
+        const timer = setInterval(() => {
+          const scrollHeight = document.body.scrollHeight;
+          window.scrollBy(0, distance);
+          totalHeight += distance;
 
-    // Intentar FlashScore primero
-    const flashscoreMatches = await this.scrapeFlashScore();
-    if (flashscoreMatches.length > 0) {
-      matches = flashscoreMatches;
-    } else {
-      // Si falla, intentar LiveScore
-      const livescoreMatches = await this.scrapeLiveScore();
-      matches = livescoreMatches;
-    }
+          if (totalHeight >= scrollHeight || totalHeight > 3000) {
+            clearInterval(timer);
+            resolve();
+          }
+        }, 100);
+      });
+    });
+  }
 
-    // Guardar en cache por 3 minutos
-    if (matches.length > 0) {
-      await cacheService.set(cacheKey, matches, 180);
+  /**
+   * Procesar enlaces de partidos
+   */
+  async processMatchLinks(links, page) {
+    const matches = [];
+    const processedUrls = new Set();
+
+    for (const link of links.slice(0, 50)) { // Limitar a 50 partidos
+      try {
+        if (processedUrls.has(link.url)) continue;
+        processedUrls.add(link.url);
+
+        const match = this.parseMatchFromText(link.text, link.url);
+        if (match) {
+          matches.push(match);
+        }
+      } catch (error) {
+        continue;
+      }
     }
 
     return matches;
   }
 
-  // Método para actualizar scores de partidos específicos
-  async updateMatchScore(homeTeam, awayTeam) {
-    const matches = await this.getScrapedMatches();
-    
-    const match = matches.find(m => 
-      m.homeTeam.toLowerCase().includes(homeTeam.toLowerCase()) &&
-      m.awayTeam.toLowerCase().includes(awayTeam.toLowerCase())
-    );
+  /**
+   * Parsear datos del partido desde texto
+   */
+  parseMatchFromText(text, url) {
+    try {
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+      
+      // Buscar equipos (las 2 primeras líneas que no sean números/hora)
+      const teams = [];
+      for (const line of lines) {
+        if (!/^\d+[:\']/.test(line) && !/^\d{1,2}:\d{2}/.test(line) && line.length > 2) {
+          teams.push(line);
+          if (teams.length === 2) break;
+        }
+      }
 
-    return match || null;
+      if (teams.length < 2) {
+        // Intentar extraer de URL
+        const match = url.match(/\/match-([^/]+)\//);
+        if (match) {
+          const parts = match[1].split('-');
+          const mid = Math.floor(parts.length / 2);
+          teams.push(parts.slice(0, mid).join(' '));
+          teams.push(parts.slice(mid).join(' '));
+        }
+      }
+
+      if (teams.length < 2) return null;
+
+      // Buscar marcador
+      const scoreMatch = text.match(/(\d+)\s*-\s*(\d+)/);
+      const score = scoreMatch ? {
+        home: parseInt(scoreMatch[1]),
+        away: parseInt(scoreMatch[2])
+      } : null;
+
+      // Buscar hora o minuto
+      let status = 'NS';
+      let elapsed = null;
+      
+      const timeMatch = text.match(/(\d{1,2}:\d{2})/);
+      if (timeMatch) {
+        status = 'NS';
+      }
+      
+      const minuteMatch = text.match(/(\d{1,3})'/);
+      if (minuteMatch) {
+        status = '1H';
+        elapsed = parseInt(minuteMatch[1]);
+      }
+
+      if (text.includes('FT') || text.includes('Finalizado')) {
+        status = 'FT';
+      }
+
+      // Extraer liga (simplificado)
+      const league = this.extractLeague(text);
+
+      return {
+        fixture: {
+          id: this.generateId(url),
+          date: new Date().toISOString(),
+          timestamp: Math.floor(Date.now() / 1000),
+          status: {
+            long: this.getStatusLong(status),
+            short: status,
+            elapsed: elapsed
+          }
+        },
+        league: {
+          id: this.generateLeagueId(league),
+          name: league,
+          country: 'Various',
+          logo: null,
+          flag: null,
+          season: new Date().getFullYear(),
+          round: 'Regular Season'
+        },
+        teams: {
+          home: {
+            id: this.generateTeamId(teams[0]),
+            name: this.capitalize(teams[0]),
+            logo: null,
+            winner: score ? score.home > score.away : null
+          },
+          away: {
+            id: this.generateTeamId(teams[1]),
+            name: this.capitalize(teams[1]),
+            logo: null,
+            winner: score ? score.away > score.home : null
+          }
+        },
+        goals: score || { home: null, away: null },
+        score: {
+          halftime: { home: null, away: null },
+          fulltime: score || { home: null, away: null },
+          extratime: { home: null, away: null },
+          penalty: { home: null, away: null }
+        }
+      };
+
+    } catch (error) {
+      return null;
+    }
   }
 
-  // Verificar si un gol fue marcado comparando scores
-  detectGoal(oldScore, newScore) {
-    if (!oldScore || !newScore) return false;
+  /**
+   * Extraer nombre de liga
+   */
+  extractLeague(text) {
+    const keywords = ['league', 'liga', 'cup', 'copa', 'premier', 'championship'];
+    const lines = text.split('\n');
     
-    const parseScore = (score) => {
-      const parts = score.split('-').map(s => parseInt(s.trim()));
-      return { home: parts[0] || 0, away: parts[1] || 0 };
+    for (const line of lines) {
+      const lower = line.toLowerCase();
+      if (keywords.some(k => lower.includes(k)) && line.length > 5) {
+        return line.trim();
+      }
+    }
+    
+    return 'International Friendly';
+  }
+
+  /**
+   * Verificar si un partido está en vivo
+   */
+  isLive(match) {
+    const status = match.fixture?.status?.short;
+    return ['1H', '2H', 'HT', 'ET', 'P', 'LIVE'].includes(status);
+  }
+
+  /**
+   * Helpers
+   */
+  generateId(url) {
+    return Math.abs(this.hashCode(url));
+  }
+
+  generateLeagueId(league) {
+    return Math.abs(this.hashCode(league || 'unknown'));
+  }
+
+  generateTeamId(team) {
+    return Math.abs(this.hashCode(team || 'unknown'));
+  }
+
+  hashCode(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return hash;
+  }
+
+  capitalize(str) {
+    return str.split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  }
+
+  getStatusLong(short) {
+    const map = {
+      'NS': 'Not Started',
+      '1H': 'First Half',
+      'HT': 'Halftime',
+      '2H': 'Second Half',
+      'ET': 'Extra Time',
+      'P': 'Penalty',
+      'FT': 'Match Finished',
+      'AET': 'Match Finished After Extra Time',
+      'PEN': 'Match Finished After Penalty'
     };
+    return map[short] || 'Not Started';
+  }
 
-    const old = parseScore(oldScore);
-    const newS = parseScore(newScore);
+  /**
+   * Guardar en MongoDB
+   */
+  async saveToDatabase(key, data) {
+    try {
+      await Fixture.findOneAndUpdate(
+        { cacheKey: key },
+        {
+          cacheKey: key,
+          data: data,
+          updatedAt: new Date()
+        },
+        { upsert: true, new: true }
+      );
+      console.log(`💾 Guardado: ${key} (${data.length} items)`);
+    } catch (error) {
+      console.error(`❌ Error guardando ${key}:`, error.message);
+    }
+  }
 
-    return (newS.home > old.home) || (newS.away > old.away);
+  /**
+   * Actualización completa nocturna
+   */
+  async fullDatabaseRefresh() {
+    console.log('🌙 Iniciando actualización completa...');
+    
+    await this.updateAllData();
+    
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    await Fixture.deleteMany({ updatedAt: { $lt: sevenDaysAgo } });
+    
+    console.log('✅ Actualización completa terminada');
+  }
+
+  /**
+   * Obtener estadísticas
+   */
+  getStats() {
+    return {
+      ...this.stats,
+      isRunning: this.isRunning,
+      nextUpdate: this.getNextUpdateTime(),
+      scrapingIntervalMinutes: 10
+    };
+  }
+
+  getNextUpdateTime() {
+    const now = new Date();
+    const minutes = now.getMinutes();
+    const nextTen = Math.ceil(minutes / 10) * 10;
+    const next = new Date(now);
+    next.setMinutes(nextTen, 0, 0);
+    return next;
+  }
+
+  /**
+   * Cerrar navegador al apagar
+   */
+  async cleanup() {
+    if (this.browser) {
+      await this.browser.close();
+      console.log('🔒 Navegador cerrado');
+    }
   }
 }
 
-export default new ScrapingService();
+export default new scrapingService();

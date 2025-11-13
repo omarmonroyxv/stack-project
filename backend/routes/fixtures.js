@@ -1,6 +1,6 @@
 import express from 'express';
 import fixturesController from '../controllers/fixturesController.js';
-import theSportsDBService from '../services/theSportsDBService.js';
+import scrapingService from '../services/scrapingService.js';
 
 const router = express.Router();
 
@@ -13,15 +13,15 @@ router.get('/stats', fixturesController.getApiStats);
 router.get('/freshness', fixturesController.getDataFreshness);
 router.get('/:id', fixturesController.getFixtureById);
 
-// 🔥 Endpoint para forzar actualización del bot
+// 🔥 Endpoint para forzar actualización del bot de scraping
 router.post('/force-update', async (req, res) => {
   try {
-    console.log('🔥 Actualización manual forzada');
-    await theSportsDBService.updateAllData();
+    console.log('🔥 Actualización manual forzada (Scraping)');
+    await scrapingService.updateAllData();
     
     res.json({
       success: true,
-      message: 'Actualización completada con TheSportsDB',
+      message: 'Actualización completada con Web Scraping',
       timestamp: new Date()
     });
   } catch (error) {
@@ -35,10 +35,10 @@ router.post('/force-update', async (req, res) => {
 
 // Endpoint para obtener stats del bot
 router.get('/bot-stats', (req, res) => {
-  const stats = theSportsDBService.getStats();
+  const stats = scrapingService.getStats();
   res.json({
     success: true,
-    service: 'TheSportsDB',
+    service: 'Web Scraping',
     ...stats
   });
 });
