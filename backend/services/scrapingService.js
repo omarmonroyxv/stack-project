@@ -3,7 +3,7 @@ import chromium from '@sparticuz/chromium';
 import cron from 'node-cron';
 import Fixture from '../models/Fixture.js';
 
-class scrapingService {
+class ScrapingService {
   constructor() {
     this.baseUrl = 'https://m.aiscore.com/es';
     this.isRunning = false;
@@ -16,9 +16,6 @@ class scrapingService {
     };
   }
 
-  /**
-   * Iniciar el bot de scraping
-   */
   start() {
     console.log('🕷️ Scraping Bot iniciado');
     console.log('📡 Actualizaciones cada 10 minutos');
@@ -38,9 +35,6 @@ class scrapingService {
     });
   }
 
-  /**
-   * Inicializar navegador Puppeteer con Chromium para serverless
-   */
   async initBrowser() {
     if (this.browser) {
       return this.browser;
@@ -49,7 +43,6 @@ class scrapingService {
     try {
       console.log('🔧 Iniciando Chromium...');
       
-      // Configuración para Render usando @sparticuz/chromium
       this.browser = await puppeteerCore.launch({
         args: chromium.args,
         defaultViewport: chromium.defaultViewport,
@@ -62,14 +55,10 @@ class scrapingService {
       
     } catch (error) {
       console.error('❌ Error iniciando Chromium:', error.message);
-      console.error('Stack:', error.stack);
       return null;
     }
   }
 
-  /**
-   * Actualizar todos los datos
-   */
   async updateAllData() {
     if (this.isRunning) {
       console.log('⏳ Actualización anterior aún en progreso...');
@@ -87,17 +76,24 @@ class scrapingService {
         throw new Error('No se pudo iniciar el navegador');
       }
 
-      // Scraping de partidos
-      const matches = await this.scrapeMatches(browser);
+      // Extraer partidos usando lógica de Python
+      const partidos = await this.extraerPartidosCompleto(browser);
+      
+      // Separar en vivo y del día
+      const liveMatches = partidos.filter(m => this.isLive(m));
+      const todayMatches = partidos.filter(m => !this.isLive(m));
+
+      console.log(`🔴 En vivo: ${liveMatches.length}`);
+      console.log(`📅 Hoy: ${todayMatches.length}`);
       
       // Guardar en MongoDB
-      await this.saveToDatabase('live_fixtures', matches.live);
-      await this.saveToDatabase('today_fixtures', matches.today);
+      await this.saveToDatabase('live_fixtures', liveMatches);
+      await this.saveToDatabase('today_fixtures', todayMatches);
 
       const duration = ((Date.now() - startTime) / 1000).toFixed(2);
       this.stats.totalUpdates++;
       this.stats.lastUpdate = new Date();
-      this.stats.fixturesUpdated = matches.live.length + matches.today.length;
+      this.stats.fixturesUpdated = liveMatches.length + todayMatches.length;
 
       console.log(`✅ [SCRAPING] Actualización completa en ${duration}s`);
       console.log(`📊 Partidos actualizados: ${this.stats.fixturesUpdated}`);
@@ -111,228 +107,414 @@ class scrapingService {
   }
 
   /**
-   * Scraping de partidos desde aiscore
+   * LÓGICA EXACTA DEL PYTHON - extraer_partidos_completo()
    */
-  async scrapeMatches(browser) {
+  async extraerPartidosCompleto(browser) {
     const page = await browser.newPage();
     
     try {
       console.log('📡 Navegando a aiscore...');
-      
-      // Configurar user agent móvil
       await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15');
+      await page.goto(this.baseUrl, { waitUntil: 'networkidle2', timeout: 90000 });
       
-      // Ir a la página
-      await page.goto(this.baseUrl, {
-        waitUntil: 'networkidle2',
-        timeout: 30000
-      });
+      console.log('⏳ Esperando 10 segundos...');
+      await new Promise(resolve => setTimeout(resolve, 10000));
 
-      console.log('⏳ Esperando carga completa...');
-      await new Promise(resolve => setTimeout(resolve, 8000));
+      // Expandir secciones colapsadas (como en Python)
+      console.log('📂 Expandiendo secciones...');
+      try {
+        const collapseButtons = await page.$$("div[class*='collapse'], div[class*='list_title']");
+        for (let i = 0; i < Math.min(collapseButtons.length, 50); i++) {
+          try {
+            await collapseButtons[i].scrollIntoView();
+            await new Promise(resolve => setTimeout(resolve, 200));
+            await collapseButtons[i].click();
+            await new Promise(resolve => setTimeout(resolve, 300));
+          } catch (e) {
+            // Ignorar errores de click
+          }
+        }
+        console.log('✅ Secciones expandidas');
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      } catch (e) {
+        console.log('⚠️ Advertencia expandiendo secciones:', e.message);
+      }
 
-      // Scroll para cargar más contenido
-      await this.autoScroll(page);
+      // Scroll para cargar más contenido (MAX_SCROLLS = 15)
+      console.log('📜 Haciendo scroll...');
+      const MAX_SCROLLS = 15;
+      const SCROLL_PAUSE_TIME = 3000;
+      
+      for (let i = 0; i < MAX_SCROLLS; i++) {
+        await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+        await new Promise(resolve => setTimeout(resolve, SCROLL_PAUSE_TIME));
+      }
 
       console.log('🔍 Extrayendo partidos...');
+      
+      const htmlSource = await page.content();
+      const elementos = await page.$$("a[href*='/match-']");
+      
+      console.log(`📊 Encontrados ${elementos.length} elementos de partidos`);
 
-      // Extraer todos los enlaces de partidos
-      const matchLinks = await page.evaluate(() => {
-        const links = Array.from(document.querySelectorAll('a[href*="/match-"]'));
-        return links.map(link => ({
-          url: link.href,
-          text: link.innerText
-        }));
-      });
+      const partidos = [];
+      const urlsProcesadas = new Set();
 
-      console.log(`📊 Encontrados ${matchLinks.length} partidos`);
+      for (let i = 0; i < elementos.length; i++) {
+        try {
+          const elemento = elementos[i];
+          let url = await elemento.evaluate(el => el.href);
+          
+          if (!url || urlsProcesadas.has(url)) continue;
+          
+          url = url.replace('/h2h', '');
+          urlsProcesadas.add(url);
 
-      // Procesar enlaces y extraer datos
-      const allMatches = await this.processMatchLinks(matchLinks);
+          // Extraer nombres desde texto
+          let local, visitante;
+          const resultado = await this.extraerNombresDesdeTexto(elemento);
+          local = resultado.local;
+          visitante = resultado.visitante;
 
-      // Separar en vivo y del día
-      const liveMatches = allMatches.filter(m => this.isLive(m));
-      const todayMatches = allMatches.filter(m => !this.isLive(m));
+          // Si no se extrajeron, intentar desde URL
+          if (!local || !visitante) {
+            const resultadoUrl = this.extraerNombresDesdeUrl(url);
+            local = resultadoUrl.local;
+            visitante = resultadoUrl.visitante;
+          }
 
-      console.log(`🔴 En vivo: ${liveMatches.length}`);
-      console.log(`📅 Hoy: ${todayMatches.length}`);
+          if (!local || !visitante) continue;
+
+          // Extraer hora/estado
+          const hora = await this.extraerHora(elemento);
+
+          // CRÍTICO: Detectar liga
+          let liga = await this.detectarLigaDesdeElementoPadre(elemento);
+          
+          if (!liga) {
+            liga = await this.extraerLigaDesdeHtmlCercano(elemento, htmlSource);
+          }
+
+          if (!liga) {
+            liga = 'Sin clasificar';
+          }
+
+          const partido = this.crearObjetoPartido(local, visitante, hora, liga, url);
+          partidos.push(partido);
+
+          // Progreso cada 10
+          if ((i + 1) % 10 === 0) {
+            console.log(`  Procesados ${i + 1}/${elementos.length}...`);
+          }
+
+        } catch (error) {
+          continue;
+        }
+      }
 
       await page.close();
-
-      return {
-        live: liveMatches,
-        today: todayMatches
-      };
+      
+      console.log(`✅ Extracción completa: ${partidos.length} partidos`);
+      return partidos;
 
     } catch (error) {
       console.error('❌ Error en scraping:', error.message);
       try { await page.close(); } catch {}
-      return { live: [], today: [] };
+      return [];
     }
   }
 
   /**
-   * Auto scroll en la página
+   * Extraer nombres desde texto del elemento
    */
-  async autoScroll(page) {
-    await page.evaluate(async () => {
-      await new Promise((resolve) => {
-        let totalHeight = 0;
-        const distance = 100;
-        const timer = setInterval(() => {
-          const scrollHeight = document.body.scrollHeight;
-          window.scrollBy(0, distance);
-          totalHeight += distance;
-
-          if (totalHeight >= scrollHeight || totalHeight > 3000) {
-            clearInterval(timer);
-            resolve();
-          }
-        }, 100);
-      });
-    });
-  }
-
-  /**
-   * Procesar enlaces de partidos
-   */
-  async processMatchLinks(links) {
-    const matches = [];
-    const processedUrls = new Set();
-
-    for (const link of links.slice(0, 50)) {
-      try {
-        if (processedUrls.has(link.url)) continue;
-        processedUrls.add(link.url);
-
-        const match = this.parseMatchFromText(link.text, link.url);
-        if (match) {
-          matches.push(match);
-        }
-      } catch (error) {
-        continue;
-      }
-    }
-
-    return matches;
-  }
-
-  /**
-   * Parsear datos del partido desde texto
-   */
-  parseMatchFromText(text, url) {
+  async extraerNombresDesdeTexto(elemento) {
     try {
-      const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+      const texto = await elemento.evaluate(el => el.innerText);
+      const lineas = texto.split('\n').map(l => l.trim()).filter(l => l);
       
-      const teams = [];
-      for (const line of lines) {
-        if (!/^\d+[:\']/.test(line) && !/^\d{1,2}:\d{2}/.test(line) && line.length > 2) {
-          teams.push(line);
-          if (teams.length === 2) break;
+      const equipos = [];
+      
+      for (const linea of lineas) {
+        // Skip minutos, horas, estados
+        if (/^\d{1,3}'/.test(linea)) continue;
+        if (/\d{1,2}:\d{2}/.test(linea)) continue;
+        if (['FT', 'HT', 'FINALIZADO', 'EN VIVO'].includes(linea.toUpperCase())) continue;
+        if (/^[\d\s\-]+$/.test(linea)) continue;
+        
+        // Si es texto razonable, es un equipo
+        if (linea.length > 2 && !/^\d+$/.test(linea)) {
+          equipos.push(linea);
         }
       }
+      
+      if (equipos.length >= 2) {
+        return { local: equipos[0], visitante: equipos[1] };
+      }
+      
+      return { local: null, visitante: null };
+      
+    } catch {
+      return { local: null, visitante: null };
+    }
+  }
 
-      if (teams.length < 2) {
-        const match = url.match(/\/match-([^/]+)\//);
-        if (match) {
-          const parts = match[1].split('-');
-          const mid = Math.floor(parts.length / 2);
-          teams.push(parts.slice(0, mid).join(' '));
-          teams.push(parts.slice(mid).join(' '));
+  /**
+   * Extraer nombres desde URL
+   */
+  extraerNombresDesdeUrl(url) {
+    try {
+      const match = url.match(/\/match-([^/]+)\//);
+      if (!match) return { local: null, visitante: null };
+      
+      const nombres = match[1];
+      const partes = nombres.split('-');
+      
+      if (partes.length < 4) {
+        const mitad = Math.floor(partes.length / 2);
+        const local = partes.slice(0, mitad).map(p => this.capitalize(p)).join(' ');
+        const visitante = partes.slice(mitad).map(p => this.capitalize(p)).join(' ');
+        return { local, visitante };
+      }
+      
+      const palabrasClub = new Set(['fc', 'sc', 'ac', 'cd', 'ca', 'cf', 'sd', 'club', 'deportivo',
+                                    'atletico', 'sporting', 'real', 'unidos', 'united', 'city']);
+      
+      let mejorDivision = Math.floor(partes.length / 2);
+      let mejorScore = -999;
+      
+      for (let i = 1; i < partes.length; i++) {
+        let score = 0;
+        const balance = Math.abs(i - (partes.length - i));
+        score -= balance;
+        
+        if (palabrasClub.has(partes[i-1].toLowerCase())) score += 5;
+        if (i < partes.length && palabrasClub.has(partes[i].toLowerCase())) score += 5;
+        
+        if (score > mejorScore) {
+          mejorScore = score;
+          mejorDivision = i;
         }
       }
-
-      if (teams.length < 2) return null;
-
-      const scoreMatch = text.match(/(\d+)\s*-\s*(\d+)/);
-      const score = scoreMatch ? {
-        home: parseInt(scoreMatch[1]),
-        away: parseInt(scoreMatch[2])
-      } : null;
-
-      let status = 'NS';
-      let elapsed = null;
       
-      const timeMatch = text.match(/(\d{1,2}:\d{2})/);
-      if (timeMatch) status = 'NS';
+      const local = partes.slice(0, mejorDivision).map(p => this.capitalize(p)).join(' ');
+      const visitante = partes.slice(mejorDivision).map(p => this.capitalize(p)).join(' ');
+      return { local, visitante };
+            
+    } catch {
+      return { local: null, visitante: null };
+    }
+  }
+
+  /**
+   * Extraer hora/estado del partido
+   */
+  async extraerHora(elemento) {
+    try {
+      const texto = await elemento.evaluate(el => el.innerText);
       
-      const minuteMatch = text.match(/(\d{1,3})'/);
-      if (minuteMatch) {
-        status = '1H';
-        elapsed = parseInt(minuteMatch[1]);
-      }
+      // Buscar hora formato 12h
+      const horaMatch = texto.match(/\d{1,2}:\d{2}\s*[ap]\.?m\.?/i);
+      if (horaMatch) return horaMatch[0];
+      
+      // Buscar minuto en vivo
+      const minutoMatch = texto.match(/\d{1,3}'/);
+      if (minutoMatch) return minutoMatch[0];
+      
+      // Estados especiales
+      if (texto.includes('FT') || texto.includes('Finalizado')) return 'FT';
+      if (texto.includes('HT')) return 'HT';
+      
+      // Buscar en innerHTML
+      const html = await elemento.evaluate(el => el.innerHTML);
+      const htmlMatch = html.match(/(\d{1,2}:\d{2}\s*[ap]\.?m\.?)/i);
+      if (htmlMatch) return htmlMatch[1];
+      
+      return 'vs';
+      
+    } catch {
+      return 'vs';
+    }
+  }
 
-      if (text.includes('FT') || text.includes('Finalizado')) {
-        status = 'FT';
-      }
-
-      const league = this.extractLeague(text);
-
-      return {
-        fixture: {
-          id: this.generateId(url),
-          date: new Date().toISOString(),
-          timestamp: Math.floor(Date.now() / 1000),
-          status: {
-            long: this.getStatusLong(status),
-            short: status,
-            elapsed: elapsed
+  /**
+   * Detectar liga desde elemento padre (buscar hacia arriba)
+   */
+  async detectarLigaDesdeElementoPadre(elemento) {
+    try {
+      // Buscar en los 5 niveles superiores
+      let currentElement = elemento;
+      
+      for (let level = 0; level < 5; level++) {
+        try {
+          currentElement = await currentElement.evaluateHandle(el => el.parentElement);
+          
+          // Buscar headers dentro del padre
+          const headers = await currentElement.$$("*[class*='title'], *[class*='header'], *[class*='league'], *[class*='list']");
+          
+          for (const header of headers) {
+            const texto = await header.evaluate(el => el.innerText?.trim());
+            
+            if (!texto || texto.length < 10 || texto.length > 100) continue;
+            
+            // Buscar patrón "País : Liga"
+            if (texto.includes(':')) {
+              const partes = texto.split(':');
+              if (partes.length >= 2) {
+                const liga = partes[1].trim();
+                
+                if (liga.length > 5 && !/\d{1,2}:\d{2}/.test(liga)) {
+                  const palabrasClave = ['league', 'liga', 'cup', 'copa', 'championship', 
+                                        'division', 'super', 'primera', 'nacional'];
+                  
+                  if (palabrasClave.some(palabra => liga.toLowerCase().includes(palabra))) {
+                    return liga;
+                  }
+                }
+              }
+            }
+            // Si no tiene ':', verificar si es un nombre de liga directo
+            else {
+              const palabrasClave = ['league', 'liga', 'cup', 'copa', 'championship', 
+                                    'division', 'super', 'primera', 'nacional'];
+              
+              if (palabrasClave.some(palabra => texto.toLowerCase().includes(palabra))) {
+                if (!/\d{1,2}:\d{2}/.test(texto) && !/\d+\s*-\s*\d+/.test(texto)) {
+                  return texto;
+                }
+              }
+            }
           }
-        },
-        league: {
-          id: this.generateLeagueId(league),
-          name: league,
-          country: 'Various',
-          logo: null,
-          flag: null,
-          season: new Date().getFullYear(),
-          round: 'Regular Season'
-        },
-        teams: {
-          home: {
-            id: this.generateTeamId(teams[0]),
-            name: this.capitalize(teams[0]),
-            logo: null,
-            winner: score ? score.home > score.away : null
-          },
-          away: {
-            id: this.generateTeamId(teams[1]),
-            name: this.capitalize(teams[1]),
-            logo: null,
-            winner: score ? score.away > score.home : null
-          }
-        },
-        goals: score || { home: null, away: null },
-        score: {
-          halftime: { home: null, away: null },
-          fulltime: score || { home: null, away: null },
-          extratime: { home: null, away: null },
-          penalty: { home: null, away: null }
+        } catch {
+          break;
         }
-      };
-
-    } catch (error) {
+      }
+      
+      return null;
+      
+    } catch {
       return null;
     }
   }
 
-  extractLeague(text) {
-    const keywords = ['league', 'liga', 'cup', 'copa', 'premier', 'championship'];
-    const lines = text.split('\n');
-    
-    for (const line of lines) {
-      const lower = line.toLowerCase();
-      if (keywords.some(k => lower.includes(k)) && line.length > 5) {
-        return line.trim();
+  /**
+   * Extraer liga desde HTML cercano
+   */
+  async extraerLigaDesdeHtmlCercano(elemento, htmlSource) {
+    try {
+      const elementoHtml = await elemento.evaluate(el => el.outerHTML);
+      const pos = htmlSource.indexOf(elementoHtml.substring(0, 200));
+      
+      if (pos > 0) {
+        const contextoPrevio = htmlSource.substring(Math.max(0, pos - 5000), pos);
+        
+        // Patrón 1: "País : Liga"
+        const matches = contextoPrevio.matchAll(/([^<>"]{3,50})\s*:\s*([^<>"]{5,80})/g);
+        
+        for (const match of Array.from(matches).reverse()) {
+          const posibleLiga = match[2].trim();
+          
+          if (posibleLiga.length > 5) {
+            if (!/\d{1,2}:\d{2}/.test(posibleLiga) && !/\d+\s*-\s*\d+/.test(posibleLiga)) {
+              const palabrasClave = ['league', 'liga', 'cup', 'copa', 'championship', 
+                                    'division', 'super', 'primera', 'nacional', 'association', 'asociación'];
+              
+              if (palabrasClave.some(palabra => posibleLiga.toLowerCase().includes(palabra))) {
+                return posibleLiga;
+              }
+            }
+          }
+        }
+        
+        // Patrón 2: Buscar texto con palabras clave
+        const textMatches = contextoPrevio.matchAll(/>([^<]{10,80})</g);
+        
+        for (const match of Array.from(textMatches).reverse()) {
+          const texto = match[1].trim();
+          
+          const palabrasClave = ['league', 'liga', 'cup', 'copa', 'championship', 
+                                'division', 'super', 'primera', 'nacional'];
+          
+          if (palabrasClave.some(palabra => texto.toLowerCase().includes(palabra))) {
+            if (!/\d{1,2}:\d{2}/.test(texto) && !/\d+\s*-\s*\d+/.test(texto)) {
+              if (texto.length > 8 && texto.split(' ').length >= 2) {
+                return texto;
+              }
+            }
+          }
+        }
       }
-    }
+    } catch {}
     
-    return 'International Friendly';
+    return null;
+  }
+
+  /**
+   * Crear objeto partido en formato API-Sports
+   */
+  crearObjetoPartido(local, visitante, hora, liga, url) {
+    let status = 'NS';
+    let elapsed = null;
+    
+    if (hora.includes("'")) {
+      status = '1H';
+      elapsed = parseInt(hora);
+    } else if (hora === 'FT') {
+      status = 'FT';
+    } else if (hora === 'HT') {
+      status = 'HT';
+    }
+
+    return {
+      fixture: {
+        id: this.generateId(url),
+        date: new Date().toISOString(),
+        timestamp: Math.floor(Date.now() / 1000),
+        status: {
+          long: this.getStatusLong(status),
+          short: status,
+          elapsed: elapsed
+        }
+      },
+      league: {
+        id: this.generateLeagueId(liga),
+        name: liga,
+        country: 'Various',
+        logo: null,
+        flag: null,
+        season: new Date().getFullYear(),
+        round: 'Regular Season'
+      },
+      teams: {
+        home: {
+          id: this.generateTeamId(local),
+          name: local,
+          logo: null,
+          winner: null
+        },
+        away: {
+          id: this.generateTeamId(visitante),
+          name: visitante,
+          logo: null,
+          winner: null
+        }
+      },
+      goals: { home: null, away: null },
+      score: {
+        halftime: { home: null, away: null },
+        fulltime: { home: null, away: null },
+        extratime: { home: null, away: null },
+        penalty: { home: null, away: null }
+      }
+    };
   }
 
   isLive(match) {
     const status = match.fixture?.status?.short;
     return ['1H', '2H', 'HT', 'ET', 'P', 'LIVE'].includes(status);
+  }
+
+  capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
   }
 
   generateId(url) {
@@ -355,12 +537,6 @@ class scrapingService {
       hash = hash & hash;
     }
     return hash;
-  }
-
-  capitalize(str) {
-    return str.split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
   }
 
   getStatusLong(short) {
@@ -432,4 +608,4 @@ class scrapingService {
   }
 }
 
-export default new scrapingService();
+export default new ScrapingService();
