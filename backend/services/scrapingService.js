@@ -38,7 +38,7 @@ class scrapingService {
   }
 
   /**
-   * Inicializar navegador Puppeteer
+   * Inicializar navegador Puppeteer - OPTIMIZADO PARA RENDER
    */
   async initBrowser() {
     if (this.browser) {
@@ -46,21 +46,46 @@ class scrapingService {
     }
 
     try {
-      this.browser = await puppeteer.launch({
+      console.log('🔧 Iniciando Puppeteer...');
+      
+      // Configuración optimizada para ambientes serverless como Render
+      const launchOptions = {
         headless: 'new',
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
           '--disable-dev-shm-usage',
           '--disable-gpu',
+          '--disable-software-rasterizer',
+          '--disable-dev-tools',
+          '--no-first-run',
+          '--no-zygote',
+          '--single-process',
+          '--disable-extensions',
+          '--disable-background-networking',
+          '--disable-default-apps',
+          '--disable-sync',
+          '--metrics-recording-only',
+          '--mute-audio',
+          '--no-default-browser-check',
           '--window-size=375,812'
         ]
-      });
+      };
+
+      // Puppeteer descarga su propio Chromium automáticamente
+      this.browser = await puppeteer.launch(launchOptions);
       
-      console.log('✅ Navegador Puppeteer iniciado');
+      console.log('✅ Navegador Puppeteer iniciado correctamente');
       return this.browser;
+      
     } catch (error) {
       console.error('❌ Error iniciando navegador:', error.message);
+      console.error('Stack completo:', error.stack);
+      
+      // Si falla, intentar reportar más detalles
+      console.error('Node version:', process.version);
+      console.error('Platform:', process.platform);
+      
       return null;
     }
   }
