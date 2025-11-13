@@ -1,4 +1,5 @@
-import puppeteer from 'puppeteer';
+import puppeteerCore from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 import cron from 'node-cron';
 import Fixture from '../models/Fixture.js';
 
@@ -38,7 +39,7 @@ class scrapingService {
   }
 
   /**
-   * Inicializar navegador Puppeteer - OPTIMIZADO PARA RENDER
+   * Inicializar navegador Puppeteer con Chromium para serverless
    */
   async initBrowser() {
     if (this.browser) {
@@ -46,46 +47,22 @@ class scrapingService {
     }
 
     try {
-      console.log('🔧 Iniciando Puppeteer...');
+      console.log('🔧 Iniciando Chromium...');
       
-      // Configuración optimizada para ambientes serverless como Render
-      const launchOptions = {
-        headless: 'new',
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--disable-software-rasterizer',
-          '--disable-dev-tools',
-          '--no-first-run',
-          '--no-zygote',
-          '--single-process',
-          '--disable-extensions',
-          '--disable-background-networking',
-          '--disable-default-apps',
-          '--disable-sync',
-          '--metrics-recording-only',
-          '--mute-audio',
-          '--no-default-browser-check',
-          '--window-size=375,812'
-        ]
-      };
-
-      // Puppeteer descarga su propio Chromium automáticamente
-      this.browser = await puppeteer.launch(launchOptions);
+      // Configuración para Render usando @sparticuz/chromium
+      this.browser = await puppeteerCore.launch({
+        args: chromium.args,
+        defaultViewport: chromium.defaultViewport,
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless,
+      });
       
-      console.log('✅ Navegador Puppeteer iniciado correctamente');
+      console.log('✅ Chromium iniciado correctamente');
       return this.browser;
       
     } catch (error) {
-      console.error('❌ Error iniciando navegador:', error.message);
-      console.error('Stack completo:', error.stack);
-      
-      // Si falla, intentar reportar más detalles
-      console.error('Node version:', process.version);
-      console.error('Platform:', process.platform);
-      
+      console.error('❌ Error iniciando Chromium:', error.message);
+      console.error('Stack:', error.stack);
       return null;
     }
   }
@@ -152,7 +129,7 @@ class scrapingService {
       });
 
       console.log('⏳ Esperando carga completa...');
-      await page.waitForTimeout(8000);
+      await new Promise(resolve => setTimeout(resolve, 8000));
 
       // Scroll para cargar más contenido
       await this.autoScroll(page);
@@ -171,7 +148,7 @@ class scrapingService {
       console.log(`📊 Encontrados ${matchLinks.length} partidos`);
 
       // Procesar enlaces y extraer datos
-      const allMatches = await this.processMatchLinks(matchLinks, page);
+      const allMatches = await this.processMatchLinks(matchLinks);
 
       // Separar en vivo y del día
       const liveMatches = allMatches.filter(m => this.isLive(m));
@@ -189,7 +166,7 @@ class scrapingService {
 
     } catch (error) {
       console.error('❌ Error en scraping:', error.message);
-      await page.close();
+      try { await page.close(); } catch {}
       return { live: [], today: [] };
     }
   }
@@ -219,11 +196,11 @@ class scrapingService {
   /**
    * Procesar enlaces de partidos
    */
-  async processMatchLinks(links, page) {
+  async processMatchLinks(links) {
     const matches = [];
     const processedUrls = new Set();
 
-    for (const link of links.slice(0, 50)) { // Limitar a 50 partidos
+    for (const link of links.slice(0, 50)) {
       try {
         if (processedUrls.has(link.url)) continue;
         processedUrls.add(link.url);
@@ -247,7 +224,6 @@ class scrapingService {
     try {
       const lines = text.split('\n').map(l => l.trim()).filter(l => l);
       
-      // Buscar equipos (las 2 primeras líneas que no sean números/hora)
       const teams = [];
       for (const line of lines) {
         if (!/^\d+[:\']/.test(line) && !/^\d{1,2}:\d{2}/.test(line) && line.length > 2) {
@@ -257,7 +233,6 @@ class scrapingService {
       }
 
       if (teams.length < 2) {
-        // Intentar extraer de URL
         const match = url.match(/\/match-([^/]+)\//);
         if (match) {
           const parts = match[1].split('-');
@@ -269,21 +244,17 @@ class scrapingService {
 
       if (teams.length < 2) return null;
 
-      // Buscar marcador
       const scoreMatch = text.match(/(\d+)\s*-\s*(\d+)/);
       const score = scoreMatch ? {
         home: parseInt(scoreMatch[1]),
         away: parseInt(scoreMatch[2])
       } : null;
 
-      // Buscar hora o minuto
       let status = 'NS';
       let elapsed = null;
       
       const timeMatch = text.match(/(\d{1,2}:\d{2})/);
-      if (timeMatch) {
-        status = 'NS';
-      }
+      if (timeMatch) status = 'NS';
       
       const minuteMatch = text.match(/(\d{1,3})'/);
       if (minuteMatch) {
@@ -295,7 +266,6 @@ class scrapingService {
         status = 'FT';
       }
 
-      // Extraer liga (simplificado)
       const league = this.extractLeague(text);
 
       return {
@@ -346,9 +316,6 @@ class scrapingService {
     }
   }
 
-  /**
-   * Extraer nombre de liga
-   */
   extractLeague(text) {
     const keywords = ['league', 'liga', 'cup', 'copa', 'premier', 'championship'];
     const lines = text.split('\n');
@@ -363,17 +330,11 @@ class scrapingService {
     return 'International Friendly';
   }
 
-  /**
-   * Verificar si un partido está en vivo
-   */
   isLive(match) {
     const status = match.fixture?.status?.short;
     return ['1H', '2H', 'HT', 'ET', 'P', 'LIVE'].includes(status);
   }
 
-  /**
-   * Helpers
-   */
   generateId(url) {
     return Math.abs(this.hashCode(url));
   }
@@ -417,9 +378,6 @@ class scrapingService {
     return map[short] || 'Not Started';
   }
 
-  /**
-   * Guardar en MongoDB
-   */
   async saveToDatabase(key, data) {
     try {
       await Fixture.findOneAndUpdate(
@@ -437,9 +395,6 @@ class scrapingService {
     }
   }
 
-  /**
-   * Actualización completa nocturna
-   */
   async fullDatabaseRefresh() {
     console.log('🌙 Iniciando actualización completa...');
     
@@ -451,9 +406,6 @@ class scrapingService {
     console.log('✅ Actualización completa terminada');
   }
 
-  /**
-   * Obtener estadísticas
-   */
   getStats() {
     return {
       ...this.stats,
@@ -472,9 +424,6 @@ class scrapingService {
     return next;
   }
 
-  /**
-   * Cerrar navegador al apagar
-   */
   async cleanup() {
     if (this.browser) {
       await this.browser.close();
