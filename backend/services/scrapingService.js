@@ -20,15 +20,12 @@ class ScrapingService {
     console.log('🕷️ Scraping Bot iniciado');
     console.log('📡 Actualizaciones cada 10 minutos');
 
-    // Ejecutar inmediatamente
     this.updateAllData();
 
-    // Cron: cada 10 minutos
     cron.schedule('*/10 * * * *', () => {
       this.updateAllData();
     });
 
-    // Actualización nocturna completa (3 AM)
     cron.schedule('0 3 * * *', () => {
       console.log('🌙 Actualización nocturna completa');
       this.fullDatabaseRefresh();
@@ -76,17 +73,14 @@ class ScrapingService {
         throw new Error('No se pudo iniciar el navegador');
       }
 
-      // Extraer partidos usando lógica de Python
       const partidos = await this.extraerPartidosCompleto(browser);
       
-      // Separar en vivo y del día
       const liveMatches = partidos.filter(m => this.isLive(m));
       const todayMatches = partidos.filter(m => !this.isLive(m));
 
       console.log(`🔴 En vivo: ${liveMatches.length}`);
       console.log(`📅 Hoy: ${todayMatches.length}`);
       
-      // Guardar en MongoDB
       await this.saveToDatabase('live_fixtures', liveMatches);
       await this.saveToDatabase('today_fixtures', todayMatches);
 
@@ -106,9 +100,6 @@ class ScrapingService {
     }
   }
 
-  /**
-   * LÓGICA EXACTA DEL PYTHON - extraer_partidos_completo()
-   */
   async extraerPartidosCompleto(browser) {
     const page = await browser.newPage();
     
@@ -120,7 +111,6 @@ class ScrapingService {
       console.log('⏳ Esperando 10 segundos...');
       await new Promise(resolve => setTimeout(resolve, 10000));
 
-      // Expandir secciones colapsadas (como en Python)
       console.log('📂 Expandiendo secciones...');
       try {
         const collapseButtons = await page.$$("div[class*='collapse'], div[class*='list_title']");
@@ -130,9 +120,7 @@ class ScrapingService {
             await new Promise(resolve => setTimeout(resolve, 200));
             await collapseButtons[i].click();
             await new Promise(resolve => setTimeout(resolve, 300));
-          } catch (e) {
-            // Ignorar errores de click
-          }
+          } catch (e) {}
         }
         console.log('✅ Secciones expandidas');
         await new Promise(resolve => setTimeout(resolve, 3000));
@@ -140,7 +128,6 @@ class ScrapingService {
         console.log('⚠️ Advertencia expandiendo secciones:', e.message);
       }
 
-      // Scroll para cargar más contenido (MAX_SCROLLS = 15)
       console.log('📜 Haciendo scroll...');
       const MAX_SCROLLS = 15;
       const SCROLL_PAUSE_TIME = 3000;
@@ -153,12 +140,15 @@ class ScrapingService {
       console.log('🔍 Extrayendo partidos...');
       
       const htmlSource = await page.content();
-      const elementos = await page.$$("a[href*='/match-']");
       
-      console.log(`📊 Encontrados ${elementos.length} elementos de partidos`);
+      // SELECTOR CORRECTO - Sin '/' como en Python
+      const elementos = await page.$$("a[href*='match']");
+      
+      console.log(`📊 Encontrados ${elementos.length} elementos`);
 
       const partidos = [];
       const urlsProcesadas = new Set();
+      let nuevos = 0;
 
       for (let i = 0; i < elementos.length; i++) {
         try {
@@ -167,7 +157,15 @@ class ScrapingService {
           
           if (!url || urlsProcesadas.has(url)) continue;
           
-          url = url.replace('/h2h', '');
+          // Validar que sea URL de partido válida
+          if (!url.includes('match') || url.includes('h2h')) {
+            if (url.includes('h2h')) {
+              url = url.replace('/h2h', '');
+            } else {
+              continue;
+            }
+          }
+          
           urlsProcesadas.add(url);
 
           // Extraer nombres desde texto
@@ -176,7 +174,6 @@ class ScrapingService {
           local = resultado.local;
           visitante = resultado.visitante;
 
-          // Si no se extrajeron, intentar desde URL
           if (!local || !visitante) {
             const resultadoUrl = this.extraerNombresDesdeUrl(url);
             local = resultadoUrl.local;
@@ -185,10 +182,8 @@ class ScrapingService {
 
           if (!local || !visitante) continue;
 
-          // Extraer hora/estado
           const hora = await this.extraerHora(elemento);
 
-          // CRÍTICO: Detectar liga
           let liga = await this.detectarLigaDesdeElementoPadre(elemento);
           
           if (!liga) {
@@ -201,10 +196,10 @@ class ScrapingService {
 
           const partido = this.crearObjetoPartido(local, visitante, hora, liga, url);
           partidos.push(partido);
+          nuevos++;
 
-          // Progreso cada 10
           if ((i + 1) % 10 === 0) {
-            console.log(`  Procesados ${i + 1}/${elementos.length}...`);
+            console.log(`  Procesados ${i + 1}/${elementos.length}... (${nuevos} válidos)`);
           }
 
         } catch (error) {
@@ -214,7 +209,7 @@ class ScrapingService {
 
       await page.close();
       
-      console.log(`✅ Extracción completa: ${partidos.length} partidos`);
+      console.log(`✅ Extracción completa: ${partidos.length} partidos de ${elementos.length} elementos`);
       return partidos;
 
     } catch (error) {
@@ -224,9 +219,6 @@ class ScrapingService {
     }
   }
 
-  /**
-   * Extraer nombres desde texto del elemento
-   */
   async extraerNombresDesdeTexto(elemento) {
     try {
       const texto = await elemento.evaluate(el => el.innerText);
@@ -235,13 +227,11 @@ class ScrapingService {
       const equipos = [];
       
       for (const linea of lineas) {
-        // Skip minutos, horas, estados
         if (/^\d{1,3}'/.test(linea)) continue;
         if (/\d{1,2}:\d{2}/.test(linea)) continue;
         if (['FT', 'HT', 'FINALIZADO', 'EN VIVO'].includes(linea.toUpperCase())) continue;
         if (/^[\d\s\-]+$/.test(linea)) continue;
         
-        // Si es texto razonable, es un equipo
         if (linea.length > 2 && !/^\d+$/.test(linea)) {
           equipos.push(linea);
         }
@@ -258,9 +248,6 @@ class ScrapingService {
     }
   }
 
-  /**
-   * Extraer nombres desde URL
-   */
   extraerNombresDesdeUrl(url) {
     try {
       const match = url.match(/\/match-([^/]+)\//);
@@ -305,26 +292,19 @@ class ScrapingService {
     }
   }
 
-  /**
-   * Extraer hora/estado del partido
-   */
   async extraerHora(elemento) {
     try {
       const texto = await elemento.evaluate(el => el.innerText);
       
-      // Buscar hora formato 12h
       const horaMatch = texto.match(/\d{1,2}:\d{2}\s*[ap]\.?m\.?/i);
       if (horaMatch) return horaMatch[0];
       
-      // Buscar minuto en vivo
       const minutoMatch = texto.match(/\d{1,3}'/);
       if (minutoMatch) return minutoMatch[0];
       
-      // Estados especiales
       if (texto.includes('FT') || texto.includes('Finalizado')) return 'FT';
       if (texto.includes('HT')) return 'HT';
       
-      // Buscar en innerHTML
       const html = await elemento.evaluate(el => el.innerHTML);
       const htmlMatch = html.match(/(\d{1,2}:\d{2}\s*[ap]\.?m\.?)/i);
       if (htmlMatch) return htmlMatch[1];
@@ -336,19 +316,14 @@ class ScrapingService {
     }
   }
 
-  /**
-   * Detectar liga desde elemento padre (buscar hacia arriba)
-   */
   async detectarLigaDesdeElementoPadre(elemento) {
     try {
-      // Buscar en los 5 niveles superiores
       let currentElement = elemento;
       
       for (let level = 0; level < 5; level++) {
         try {
           currentElement = await currentElement.evaluateHandle(el => el.parentElement);
           
-          // Buscar headers dentro del padre
           const headers = await currentElement.$$("*[class*='title'], *[class*='header'], *[class*='league'], *[class*='list']");
           
           for (const header of headers) {
@@ -356,7 +331,6 @@ class ScrapingService {
             
             if (!texto || texto.length < 10 || texto.length > 100) continue;
             
-            // Buscar patrón "País : Liga"
             if (texto.includes(':')) {
               const partes = texto.split(':');
               if (partes.length >= 2) {
@@ -372,7 +346,6 @@ class ScrapingService {
                 }
               }
             }
-            // Si no tiene ':', verificar si es un nombre de liga directo
             else {
               const palabrasClave = ['league', 'liga', 'cup', 'copa', 'championship', 
                                     'division', 'super', 'primera', 'nacional'];
@@ -396,9 +369,6 @@ class ScrapingService {
     }
   }
 
-  /**
-   * Extraer liga desde HTML cercano
-   */
   async extraerLigaDesdeHtmlCercano(elemento, htmlSource) {
     try {
       const elementoHtml = await elemento.evaluate(el => el.outerHTML);
@@ -407,7 +377,6 @@ class ScrapingService {
       if (pos > 0) {
         const contextoPrevio = htmlSource.substring(Math.max(0, pos - 5000), pos);
         
-        // Patrón 1: "País : Liga"
         const matches = contextoPrevio.matchAll(/([^<>"]{3,50})\s*:\s*([^<>"]{5,80})/g);
         
         for (const match of Array.from(matches).reverse()) {
@@ -425,7 +394,6 @@ class ScrapingService {
           }
         }
         
-        // Patrón 2: Buscar texto con palabras clave
         const textMatches = contextoPrevio.matchAll(/>([^<]{10,80})</g);
         
         for (const match of Array.from(textMatches).reverse()) {
@@ -448,9 +416,6 @@ class ScrapingService {
     return null;
   }
 
-  /**
-   * Crear objeto partido en formato API-Sports
-   */
   crearObjetoPartido(local, visitante, hora, liga, url) {
     let status = 'NS';
     let elapsed = null;
