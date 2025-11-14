@@ -4,152 +4,144 @@ import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import mongoose from 'mongoose';
-import cron from 'node-cron';
+import { createClient } from 'redis';
+import dotenv from 'dotenv';
 
-import { config } from './config/config.js';
-import cacheService from './services/cacheService.js';
-import scrapingService from './services/scrapingService.js';
+// Routes
+import fixturesRouter from './routes/fixtures.js';
+import blogRouter from './routes/blog.js';
 
-import fixturesRoutes from './routes/fixtures.js';
-import blogRoutes from './routes/blog.js';
+dotenv.config();
 
 const app = express();
+const PORT = process.env.PORT || 5000;
 
-// Trust proxy for Render
-app.set('trust proxy', 1);
+// ============================================
+// MIDDLEWARE
+// ============================================
 
-// CORS Configuration
-const allowedOrigins = process.env.NODE_ENV === 'production' 
-  ? [
-      process.env.FRONTEND_URL,
-      'https://stack-frontend.onrender.com',
-      /\.onrender\.com$/
-    ]
-  : ['http://localhost:3000'];
-
-app.use(cors({
-  origin: function(origin, callback) {
-    if (!origin) return callback(null, true);
-    
-    const isAllowed = allowedOrigins.some(allowed => {
-      if (allowed instanceof RegExp) {
-        return allowed.test(origin);
-      }
-      return allowed === origin;
-    });
-    
-    if (isAllowed) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true
-}));
-
-// Middlewares de seguridad
 app.use(helmet());
 app.use(compression());
-
-// Rate limiting general
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: 'Demasiadas solicitudes desde esta IP, intenta de nuevo más tarde.'
-});
-app.use('/api/', limiter);
-
-// Body parser
+app.use(cors({
+  origin: process.env.FRONTEND_URL || '*',
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Rutas
-app.use('/api/fixtures', fixturesRoutes);
-app.use('/api/blog', blogRoutes);
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100 // límite de 100 requests por ventana
+});
+app.use('/api/', limiter);
 
-// Ruta de health check
-app.get('/', (req, res) => {
+// ============================================
+// MONGODB CONNECTION
+// ============================================
+
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log('✅ MongoDB conectado');
+  } catch (error) {
+    console.error('❌ Error conectando a MongoDB:', error);
+    process.exit(1);
+  }
+};
+
+// ============================================
+// REDIS CONNECTION (OPCIONAL - PARA CACHÉ)
+// ============================================
+
+let redisClient = null;
+
+const connectRedis = async () => {
+  if (!process.env.REDIS_URL) {
+    console.log('⚠️  Redis no configurado - continuando sin caché');
+    return;
+  }
+
+  try {
+    redisClient = createClient({
+      url: process.env.REDIS_URL
+    });
+
+    redisClient.on('error', (err) => {
+      console.error('❌ Error de Redis:', err);
+    });
+
+    await redisClient.connect();
+    console.log('✅ Redis conectado');
+  } catch (error) {
+    console.error('⚠️  Redis no disponible - continuando sin caché');
+  }
+};
+
+// ============================================
+// ROUTES
+// ============================================
+
+app.use('/api/fixtures', fixturesRouter);
+app.use('/api/blog', blogRouter);
+
+// Health check
+app.get('/api/health', (req, res) => {
   res.json({ 
-    success: true, 
-    message: 'Stack API funcionando con Web Scraping',
+    status: 'ok',
+    message: 'Stack API running',
     timestamp: new Date().toISOString()
   });
 });
 
-// Manejo de rutas no encontradas
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    error: 'Ruta no encontrada'
-  });
-});
-
-// Manejo de errores global
-app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  res.status(err.status || 500).json({
-    success: false,
-    error: err.message || 'Error interno del servidor'
-  });
-});
-
-// Conexión a MongoDB
-const connectDB = async () => {
-  try {
-    await mongoose.connect(config.mongodb.uri);
-    console.log('✅ MongoDB conectado');
-    
-    // 🕷️ INICIAR SCRAPING BOT
-    console.log('🕷️ Iniciando Scraping Bot...');
-    scrapingService.start();
-    
-  } catch (error) {
-    console.error('❌ Error conectando a MongoDB:', error.message);
-    
-    if (config.nodeEnv === 'production') {
-      process.exit(1);
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Stack API - Football Content Platform',
+    version: '2.0.0',
+    endpoints: {
+      health: '/api/health',
+      blog: '/api/blog',
+      fixtures: '/api/fixtures (coming soon)'
     }
-  }
-};
+  });
+});
 
-// Inicializar servicios
-const initializeServices = async () => {
-  console.log('✅ Servicios inicializados');
-};
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: 'Endpoint no encontrado' });
+});
 
-// Iniciar servidor
+// ============================================
+// SERVER START
+// ============================================
+
 const startServer = async () => {
   try {
+    // Conectar a MongoDB
     await connectDB();
-    await initializeServices();
-
-    app.listen(config.port, () => {
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log(`🚀 Stack API corriendo en puerto ${config.port}`);
-      console.log(`📍 Entorno: ${config.nodeEnv}`);
-      console.log(`🕷️ Usando Web Scraping (ilimitado)`);
-      console.log(`🌐 URL: http://localhost:${config.port}`);
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
+    // Conectar a Redis (opcional)
+    await connectRedis();
+    
+    // Iniciar servidor
+    app.listen(PORT, () => {
+      console.log(`\n🚀 Servidor corriendo en puerto ${PORT}`);
+      console.log(`📝 Modo: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🌐 API disponible en: http://localhost:${PORT}/api\n`);
     });
-
   } catch (error) {
     console.error('❌ Error iniciando servidor:', error);
     process.exit(1);
   }
 };
 
-// Manejo de señales de terminación
-process.on('SIGTERM', async () => {
-  console.log('SIGTERM recibido. Cerrando servidor...');
-  await mongoose.connection.close();
-  process.exit(0);
-});
-
-process.on('SIGINT', async () => {
-  console.log('\nSIGINT recibido. Cerrando servidor...');
-  await mongoose.connection.close();
-  process.exit(0);
-});
-
-// Iniciar aplicación
 startServer();
+
+// Manejo de errores no capturados
+process.on('unhandledRejection', (error) => {
+  console.error('❌ Unhandled Rejection:', error);
+});

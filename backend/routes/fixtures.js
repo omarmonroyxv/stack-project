@@ -1,45 +1,87 @@
 import express from 'express';
-import fixturesController from '../controllers/fixturesController.js';
-import scrapingService from '../services/scrapingService.js';
 
 const router = express.Router();
 
-// Rutas normales
-router.get('/live', fixturesController.getLiveFixtures);
-router.get('/today', fixturesController.getTodayFixtures);
-router.get('/leagues', fixturesController.getTopLeagues);
-router.get('/standings', fixturesController.getStandings);
-router.get('/stats', fixturesController.getApiStats);
-router.get('/freshness', fixturesController.getDataFreshness);
-router.get('/:id', fixturesController.getFixtureById);
+// ============================================
+// MENSAJE DE PRÓXIMAMENTE
+// ============================================
 
-// 🔥 Endpoint para forzar actualización del bot de scraping
-router.post('/force-update', async (req, res) => {
-  try {
-    console.log('🔥 Actualización manual forzada (Scraping)');
-    await scrapingService.updateAllData();
-    
-    res.json({
-      success: true,
-      message: 'Actualización completada con Web Scraping',
-      timestamp: new Date()
-    });
-  } catch (error) {
-    console.error('Error en actualización forzada:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
+const comingSoonResponse = {
+  success: true,
+  message: 'Resultados en vivo próximamente',
+  status: 'coming_soon',
+  description: 'Estamos trabajando para traerte los mejores resultados de fútbol en tiempo real. Mientras tanto, disfruta de nuestro contenido exclusivo.',
+  cta: {
+    text: 'Visita nuestro blog',
+    link: '/blog'
+  },
+  estimatedLaunch: '2025-Q1',
+  features: [
+    'Resultados en vivo',
+    'Estadísticas detalladas',
+    'Alineaciones',
+    'Eventos del partido',
+    'Clasificaciones'
+  ]
+};
+
+// ============================================
+// ENDPOINTS
+// ============================================
+
+// GET /api/fixtures/live
+router.get('/live', (req, res) => {
+  res.json({
+    ...comingSoonResponse,
+    endpoint: 'live',
+    data: []
+  });
 });
 
-// Endpoint para obtener stats del bot
-router.get('/bot-stats', (req, res) => {
-  const stats = scrapingService.getStats();
+// GET /api/fixtures/today
+router.get('/today', (req, res) => {
+  res.json({
+    ...comingSoonResponse,
+    endpoint: 'today',
+    data: []
+  });
+});
+
+// GET /api/fixtures/upcoming
+router.get('/upcoming', (req, res) => {
+  res.json({
+    ...comingSoonResponse,
+    endpoint: 'upcoming',
+    data: []
+  });
+});
+
+// GET /api/fixtures/stats
+router.get('/stats', (req, res) => {
   res.json({
     success: true,
-    service: 'Web Scraping',
-    ...stats
+    service: 'Coming Soon',
+    status: 'development',
+    message: 'El sistema de resultados estará disponible próximamente',
+    lastUpdate: null,
+    totalMatches: 0,
+    availableFeatures: {
+      blog: true,
+      news: true,
+      predictions: true,
+      injuries: true,
+      transfers: true
+    }
+  });
+});
+
+// GET /api/fixtures/:id
+router.get('/:id', (req, res) => {
+  res.json({
+    ...comingSoonResponse,
+    endpoint: 'match_details',
+    matchId: req.params.id,
+    data: null
   });
 });
 
