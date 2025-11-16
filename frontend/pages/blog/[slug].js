@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
-import { blogApi } from '../../lib/api';
 import { formatDate } from '../../lib/utils';
 import Link from 'next/link';
+
+const API_URL = 'https://stack-project.onrender.com/api/blog';
 
 export default function PostPage() {
   const router = useRouter();
@@ -13,12 +14,13 @@ export default function PostPage() {
 
   useEffect(() => {
     if (!slug) return;
-    
+
     const fetchPost = async () => {
       try {
-        const res = await blogApi.getPostBySlug(slug);
-        if (res.data.success) {
-          setPost(res.data.data);
+        const res = await fetch(`${API_URL}/${slug}`);
+        const data = await res.json();
+        if (data.success) {
+          setPost(data.data.post || data.data);
         }
       } catch (error) {
         console.error(error);
@@ -26,7 +28,7 @@ export default function PostPage() {
         setLoading(false);
       }
     };
-    
+
     fetchPost();
   }, [slug]);
 
