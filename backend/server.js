@@ -20,31 +20,22 @@ const PORT = process.env.PORT || 5000;
 // MIDDLEWARE
 // ============================================
 
-app.use(helmet());
-app.use(compression());
+// Trust proxy
+app.set('trust proxy', 1);
 
-// CORS configuration - allow multiple origins
-const allowedOrigins = [
-  'http://localhost:3000',
-  'https://stack-frontend-83qq.onrender.com',
-  process.env.FRONTEND_URL
-].filter(Boolean);
-
+// Configuración simplificada de CORS
 app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: true, // Permite todos los orígenes temporalmente
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Length', 'Content-Range']
 }));
+
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
+app.use(compression());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
