@@ -1,5 +1,4 @@
-import React from 'react';
-import Layout from '../components/Layout-Premium';
+import Layout from '../components/Layout';
 import ComingSoonResults from '../components/ComingSoonResults';
 
 export default function Live() {
