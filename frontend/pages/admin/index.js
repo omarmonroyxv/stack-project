@@ -48,7 +48,7 @@ export default function ArticleEditor({ isEdit = false }) {
 
   const fetchArticle = async () => {
     try {
-      const response = await fetch(`/api/blog/${slug}`);
+      const response = await fetch(`https://stack-backend-qwon.onrender.com/api/blog/${slug}`);
       const data = await response.json();
       if (data.success) {
         setFormData(data.data);
@@ -103,9 +103,11 @@ export default function ArticleEditor({ isEdit = false }) {
 
   const handleSubmit = async (status) => {
     setSaving(true);
-    
+
     try {
-      const url = isEdit ? `/api/blog/${slug}` : '/api/blog';
+      const url = isEdit
+        ? `https://stack-backend-qwon.onrender.com/api/blog/${slug}`
+        : 'https://stack-backend-qwon.onrender.com/api/blog';
       const method = isEdit ? 'PUT' : 'POST';
       
       const response = await fetch(url, {
