@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import Layout from '../../components/Layout';
 import BlogPostCard from '../../components/BlogPostCard';
-import { blogApi } from '../../lib/api';
 import { FiSearch, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+
+const API_URL = 'https://stack-project.onrender.com/api/blog';
 
 export default function Blog() {
   const [posts, setPosts] = useState([]);
@@ -29,26 +30,30 @@ export default function Blog() {
   const fetchPosts = async () => {
     try {
       setLoading(true);
-      
-      const params = {
-        page,
-        limit: 9
-      };
 
-      if (selectedCategory) params.category = selectedCategory;
-      if (searchQuery) params.search = searchQuery;
+      // Construir query params
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: '9'
+      });
 
-      const res = await blogApi.getPosts(params);
-      
-      if (res.data.success) {
-        setPosts(res.data.data);
-        setTotalPages(res.data.pagination?.pages || 1);
-        
+      if (selectedCategory) queryParams.append('category', selectedCategory);
+      if (searchQuery) queryParams.append('search', searchQuery);
+
+      // Fetch posts
+      const res = await fetch(`${API_URL}?${queryParams.toString()}`);
+      const data = await res.json();
+
+      if (data.success) {
+        setPosts(data.data);
+        setTotalPages(data.pagination?.pages || 1);
+
         // Obtener post destacado solo en la primera página
         if (page === 1 && !selectedCategory && !searchQuery) {
-          const featuredRes = await blogApi.getFeaturedPosts();
-          if (featuredRes.data.success && featuredRes.data.data.length > 0) {
-            setFeaturedPost(featuredRes.data.data[0]);
+          const featuredRes = await fetch(`${API_URL}/featured?limit=1`);
+          const featuredData = await featuredRes.json();
+          if (featuredData.success && featuredData.data.length > 0) {
+            setFeaturedPost(featuredData.data[0]);
           }
         }
       }
