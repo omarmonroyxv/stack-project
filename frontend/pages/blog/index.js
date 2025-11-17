@@ -196,7 +196,7 @@ export default function Blog() {
                       <div className="flex items-center gap-4 text-sm text-gray-500">
                         <div className="flex items-center gap-1">
                           <FiUser className="w-4 h-4" />
-                          <span>{post.author || 'Stack Editorial'}</span>
+                          <span>{typeof post.author === 'string' ? post.author : post.author?.name || 'Stack Editorial'}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <FiCalendar className="w-4 h-4" />

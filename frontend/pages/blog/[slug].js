@@ -160,7 +160,7 @@ export default function PostPage() {
           >
             <div className="flex items-center gap-2">
               <FiUser className="w-5 h-5" />
-              <span className="font-semibold">{post.author || 'Stack Editorial'}</span>
+              <span className="font-semibold">{typeof post.author === 'string' ? post.author : post.author?.name || 'Stack Editorial'}</span>
             </div>
             <div className="flex items-center gap-2">
               <FiCalendar className="w-5 h-5" />
