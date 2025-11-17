@@ -16,11 +16,11 @@ export default function PostPage() {
     
     const fetchPost = async () => {
       try {
-        const res = await fetch(`https://stack-backend-qwon.onrender.com/api/blog/${slug}`);
+        const res = await fetch(`https://stack-project.onrender.com/api/blog/${slug}`);
         const data = await res.json();
-        
+
         if (data.success) {
-          setPost(data.data.post);
+          setPost(data.data.post || data.data);
         }
       } catch (error) {
         console.error(error);

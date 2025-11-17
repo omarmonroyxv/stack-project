@@ -38,7 +38,7 @@ export default function Blog() {
       if (searchQuery) params.search = searchQuery;
 
       const queryString = new URLSearchParams(params).toString();
-      const res = await fetch(`https://stack-backend-qwon.onrender.com/api/blog?${queryString}`);
+      const res = await fetch(`https://stack-project.onrender.com/api/blog?${queryString}`);
       const data = await res.json();
       
       if (data.success) {
