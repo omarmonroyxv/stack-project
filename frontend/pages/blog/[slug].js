@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import Script from 'next/script';
 import { FiCalendar, FiUser, FiEye, FiArrowLeft, FiTag } from 'react-icons/fi';
 
 export default function PostPage() {
@@ -80,6 +81,13 @@ export default function PostPage() {
 
   return (
     <Layout title={post.title} description={post.excerpt}>
+      {/* Google AdSense Script */}
+      <Script
+        async
+        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7952622864180199"
+        crossOrigin="anonymous"
+        strategy="afterInteractive" // Carga el script después de que la página sea interactiva
+      />
       <div className="min-h-screen bg-slate-950">
         
         {/* Back Button */}
