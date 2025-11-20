@@ -25,6 +25,30 @@ export default function Blog() {
     fetchPosts();
   }, [page, selectedCategory, searchQuery]);
 
+  // Load Ezoic ads
+  useEffect(() => {
+    if (!loading && typeof window !== 'undefined' && window.ezstandalone) {
+      // Destroy previous placeholder when changing pages
+      window.ezstandalone.cmd.push(function () {
+        window.ezstandalone.destroyPlaceholders(104);
+      });
+
+      // Show ads for new page
+      window.ezstandalone.cmd.push(function () {
+        window.ezstandalone.showAds(104);
+      });
+    }
+
+    // Cleanup when component unmounts
+    return () => {
+      if (typeof window !== 'undefined' && window.ezstandalone) {
+        window.ezstandalone.cmd.push(function () {
+          window.ezstandalone.destroyPlaceholders(104);
+        });
+      }
+    };
+  }, [loading, page]);
+
   const fetchPosts = async () => {
     try {
       setLoading(true);
@@ -131,6 +155,11 @@ export default function Blog() {
                 ))}
               </select>
             </div>
+          </div>
+
+          {/* Ezoic Ad - Blog List Top */}
+          <div className="mb-8">
+            <div id="ezoic-pub-ad-placeholder-104"></div>
           </div>
 
           {/* Posts Grid */}

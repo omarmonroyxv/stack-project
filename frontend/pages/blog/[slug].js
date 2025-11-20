@@ -3,7 +3,6 @@ import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import Script from 'next/script';
 import { FiCalendar, FiUser, FiEye, FiArrowLeft, FiTag } from 'react-icons/fi';
 
 export default function PostPage() {
@@ -14,7 +13,7 @@ export default function PostPage() {
 
   useEffect(() => {
     if (!slug) return;
-    
+
     const fetchPost = async () => {
       try {
         const res = await fetch(`https://stack-project.onrender.com/api/blog/${slug}`);
@@ -29,9 +28,33 @@ export default function PostPage() {
         setLoading(false);
       }
     };
-    
+
     fetchPost();
   }, [slug]);
+
+  // Load Ezoic ads when post is loaded
+  useEffect(() => {
+    if (post && typeof window !== 'undefined' && window.ezstandalone) {
+      // Destroy previous placeholders when changing pages
+      window.ezstandalone.cmd.push(function () {
+        window.ezstandalone.destroyPlaceholders(101, 102, 103);
+      });
+
+      // Show ads for new page
+      window.ezstandalone.cmd.push(function () {
+        window.ezstandalone.showAds(101, 102, 103);
+      });
+    }
+
+    // Cleanup when component unmounts or slug changes
+    return () => {
+      if (typeof window !== 'undefined' && window.ezstandalone) {
+        window.ezstandalone.cmd.push(function () {
+          window.ezstandalone.destroyPlaceholders(101, 102, 103);
+        });
+      }
+    };
+  }, [post, slug]);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -81,13 +104,6 @@ export default function PostPage() {
 
   return (
     <Layout title={post.title} description={post.excerpt}>
-      {/* Google AdSense Script */}
-      <Script
-        async
-        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7952622864180199"
-        crossOrigin="anonymous"
-        strategy="afterInteractive" // Carga el script después de que la página sea interactiva
-      />
       <div className="min-h-screen bg-slate-950">
         
         {/* Back Button */}
@@ -181,9 +197,14 @@ export default function PostPage() {
               </div>
             )}
           </motion.div>
-          
+
+          {/* Ezoic Ad - Top of Article */}
+          <div className="mb-8">
+            <div id="ezoic-pub-ad-placeholder-101"></div>
+          </div>
+
           {/* Content */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
@@ -227,7 +248,12 @@ export default function PostPage() {
               }} 
             />
           </motion.div>
-          
+
+          {/* Ezoic Ad - Middle of Article */}
+          <div className="my-8">
+            <div id="ezoic-pub-ad-placeholder-102"></div>
+          </div>
+
           {/* Tags */}
           {post.tags && post.tags.length > 0 && (
             <motion.div 
@@ -252,9 +278,14 @@ export default function PostPage() {
               </div>
             </motion.div>
           )}
-          
+
+          {/* Ezoic Ad - Bottom of Article */}
+          <div className="my-12">
+            <div id="ezoic-pub-ad-placeholder-103"></div>
+          </div>
+
           {/* Back to Blog Button */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.7 }}
