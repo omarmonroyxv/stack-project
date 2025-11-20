@@ -302,8 +302,8 @@ export default function Layout({ children, title, description }) {
               <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-500">
                 <p>© 2024 Stack. Todos los derechos reservados.</p>
                 <div className="flex gap-6">
-                  <a href="#" className="hover:text-white transition-colors">Privacidad</a>
-                  <a href="#" className="hover:text-white transition-colors">Términos</a>
+                  <a href="/privacy" className="hover:text-white transition-colors">Privacidad</a>
+                  <a href="/terms" className="hover:text-white transition-colors">Términos</a>
                   <a href="#" className="hover:text-white transition-colors">Contacto</a>
                 </div>
               </div>
