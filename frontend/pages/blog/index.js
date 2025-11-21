@@ -14,18 +14,29 @@ export async function getServerSideProps({ query }) {
 
   try {
     const params = new URLSearchParams({
-      page,
-      limit: 9,
-      ...(category && { category }),
-      ...(search && { search })
+      page: String(page),
+      limit: '9'
     });
 
-    const res = await fetch(`${API_URL}?${params}`);
+    if (category) params.append('category', category);
+    if (search) params.append('search', search);
+
+    const url = `${API_URL}?${params.toString()}`;
+    console.log('Fetching posts from:', url);
+
+    const res = await fetch(url);
+
+    if (!res.ok) {
+      console.error('API response not ok:', res.status, res.statusText);
+      throw new Error(`API error: ${res.status}`);
+    }
+
     const data = await res.json();
+    console.log('API response:', { success: data.success, postsCount: data.data?.length });
 
     return {
       props: {
-        initialPosts: data.success ? data.data : [],
+        initialPosts: data.success && Array.isArray(data.data) ? data.data : [],
         initialTotalPages: data.pagination?.pages || 1,
         initialPage: parseInt(page),
         initialCategory: category,
@@ -33,7 +44,7 @@ export async function getServerSideProps({ query }) {
       }
     };
   } catch (error) {
-    console.error('Error fetching posts:', error);
+    console.error('Error fetching posts:', error.message);
     return {
       props: {
         initialPosts: [],
