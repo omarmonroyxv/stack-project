@@ -1,52 +1,55 @@
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useEffect } from 'react';
 import Layout from '../../components/Layout';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { FiCalendar, FiUser, FiEye, FiArrowLeft, FiTag } from 'react-icons/fi';
 
-export default function PostPage() {
-  const router = useRouter();
-  const { slug } = router.query;
-  const [post, setPost] = useState(null);
-  const [loading, setLoading] = useState(true);
+const API_URL = 'https://stack-project.onrender.com/api/blog';
 
-  useEffect(() => {
-    if (!slug) return;
+// SSR: Se ejecuta en el servidor antes de enviar la página
+export async function getServerSideProps({ params }) {
+  const { slug } = params;
 
-    const fetchPost = async () => {
-      try {
-        const res = await fetch(`https://stack-project.onrender.com/api/blog/${slug}`);
-        const data = await res.json();
+  try {
+    const res = await fetch(`${API_URL}/${slug}`);
+    const data = await res.json();
 
-        if (data.success) {
-          setPost(data.data.post || data.data);
+    if (data.success && (data.data.post || data.data)) {
+      return {
+        props: {
+          post: data.data.post || data.data
         }
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
+      };
+    }
+
+    // Post no encontrado
+    return {
+      props: {
+        post: null
       }
     };
+  } catch (error) {
+    console.error('Error fetching post:', error);
+    return {
+      props: {
+        post: null
+      }
+    };
+  }
+}
 
-    fetchPost();
-  }, [slug]);
-
-  // Load Ezoic ads when post is loaded
+export default function PostPage({ post }) {
+  // Load Ezoic ads when component mounts
   useEffect(() => {
     if (post && typeof window !== 'undefined' && window.ezstandalone) {
-      // Destroy previous placeholders when changing pages
       window.ezstandalone.cmd.push(function () {
         window.ezstandalone.destroyPlaceholders(101, 102, 103);
       });
-
-      // Show ads for new page
       window.ezstandalone.cmd.push(function () {
         window.ezstandalone.showAds(101, 102, 103);
       });
     }
 
-    // Cleanup when component unmounts or slug changes
     return () => {
       if (typeof window !== 'undefined' && window.ezstandalone) {
         window.ezstandalone.cmd.push(function () {
@@ -54,34 +57,18 @@ export default function PostPage() {
         });
       }
     };
-  }, [post, slug]);
+  }, [post]);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    return date.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
   };
 
-  if (loading) {
-    return (
-      <Layout title="Cargando...">
-        <div className="min-h-screen bg-slate-950 py-12">
-          <div className="container-custom max-w-4xl">
-            <div className="animate-pulse">
-              <div className="h-8 bg-white/10 rounded w-1/4 mb-8"></div>
-              <div className="h-96 bg-white/10 rounded mb-8"></div>
-              <div className="h-12 bg-white/10 rounded w-3/4 mb-4"></div>
-              <div className="h-6 bg-white/10 rounded w-1/2"></div>
-            </div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
+  // Post no encontrado
   if (!post) {
     return (
       <Layout title="Post no encontrado">
@@ -105,7 +92,7 @@ export default function PostPage() {
   return (
     <Layout title={post.title} description={post.excerpt}>
       <div className="min-h-screen bg-slate-950">
-        
+
         {/* Back Button */}
         <div className="border-b border-white/5">
           <div className="container-custom py-6">
@@ -119,25 +106,25 @@ export default function PostPage() {
         </div>
 
         <article className="container-custom py-12 max-w-4xl">
-          
+
           {/* Cover Image */}
           {post.coverImage && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="relative w-full h-96 rounded-2xl overflow-hidden mb-8"
             >
-              <img 
-                src={post.coverImage} 
-                alt={post.title} 
+              <img
+                src={post.coverImage}
+                alt={post.title}
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950 to-transparent" />
             </motion.div>
           )}
-          
+
           {/* Category & Featured Badge */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.1 }}
@@ -152,9 +139,9 @@ export default function PostPage() {
               </span>
             )}
           </motion.div>
-          
+
           {/* Title */}
-          <motion.h1 
+          <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
@@ -165,7 +152,7 @@ export default function PostPage() {
 
           {/* Excerpt */}
           {post.excerpt && (
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
@@ -174,9 +161,9 @@ export default function PostPage() {
               {post.excerpt}
             </motion.p>
           )}
-          
+
           {/* Meta Information */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
@@ -270,7 +257,7 @@ export default function PostPage() {
 
           {/* Tags */}
           {post.tags && post.tags.length > 0 && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6 }}
@@ -282,7 +269,7 @@ export default function PostPage() {
               </h3>
               <div className="flex flex-wrap gap-3">
                 {post.tags.map((tag, idx) => (
-                  <span 
+                  <span
                     key={idx}
                     className="px-4 py-2 bg-white/5 border border-white/10 text-gray-400 rounded-full text-sm hover:bg-white/10 hover:text-white transition-colors"
                   >

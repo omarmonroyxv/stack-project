@@ -1,16 +1,64 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '../../components/Layout';
 import { FiSearch, FiChevronLeft, FiChevronRight, FiCalendar, FiUser } from 'react-icons/fi';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 
-export default function Blog() {
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+const API_URL = 'https://stack-project.onrender.com/api/blog';
+
+// SSR: Se ejecuta en el servidor antes de enviar la página
+export async function getServerSideProps({ query }) {
+  const page = query.page || 1;
+  const category = query.category || '';
+  const search = query.search || '';
+
+  try {
+    const params = new URLSearchParams({
+      page,
+      limit: 9,
+      ...(category && { category }),
+      ...(search && { search })
+    });
+
+    const res = await fetch(`${API_URL}?${params}`);
+    const data = await res.json();
+
+    return {
+      props: {
+        initialPosts: data.success ? data.data : [],
+        initialTotalPages: data.pagination?.pages || 1,
+        initialPage: parseInt(page),
+        initialCategory: category,
+        initialSearch: search
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching posts:', error);
+    return {
+      props: {
+        initialPosts: [],
+        initialTotalPages: 1,
+        initialPage: 1,
+        initialCategory: '',
+        initialSearch: ''
+      }
+    };
+  }
+}
+
+export default function Blog({
+  initialPosts,
+  initialTotalPages,
+  initialPage,
+  initialCategory,
+  initialSearch
+}) {
+  const [posts, setPosts] = useState(initialPosts);
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(initialPage);
+  const [totalPages, setTotalPages] = useState(initialTotalPages);
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
 
   const categories = [
     { value: '', label: 'Todas', icon: '📂' },
@@ -21,25 +69,55 @@ export default function Blog() {
     { value: 'curiosidades', label: 'Curiosidades', icon: '⚡' }
   ];
 
+  // Fetch posts cuando cambian los filtros (client-side para interactividad)
+  const fetchPosts = async () => {
+    try {
+      setLoading(true);
+
+      const params = new URLSearchParams({
+        page,
+        limit: 9,
+        ...(selectedCategory && { category: selectedCategory }),
+        ...(searchQuery && { search: searchQuery })
+      });
+
+      const res = await fetch(`${API_URL}?${params}`);
+      const data = await res.json();
+
+      if (data.success) {
+        setPosts(data.data || []);
+        setTotalPages(data.pagination?.pages || 1);
+      }
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Actualizar cuando cambian filtros o página
   useEffect(() => {
-    fetchPosts();
-  }, [page, selectedCategory, searchQuery]);
+    // Solo fetch si los valores cambiaron desde la carga inicial
+    if (
+      page !== initialPage ||
+      selectedCategory !== initialCategory ||
+      searchQuery !== initialSearch
+    ) {
+      fetchPosts();
+    }
+  }, [page, selectedCategory]);
 
   // Load Ezoic ads
   useEffect(() => {
     if (!loading && typeof window !== 'undefined' && window.ezstandalone) {
-      // Destroy previous placeholder when changing pages
       window.ezstandalone.cmd.push(function () {
         window.ezstandalone.destroyPlaceholders(104);
       });
-
-      // Show ads for new page
       window.ezstandalone.cmd.push(function () {
         window.ezstandalone.showAds(104);
       });
     }
 
-    // Cleanup when component unmounts
     return () => {
       if (typeof window !== 'undefined' && window.ezstandalone) {
         window.ezstandalone.cmd.push(function () {
@@ -49,34 +127,6 @@ export default function Blog() {
     };
   }, [loading, page]);
 
-  const fetchPosts = async () => {
-    try {
-      setLoading(true);
-      
-      const params = {
-        page,
-        limit: 9
-      };
-
-      if (selectedCategory) params.category = selectedCategory;
-      if (searchQuery) params.search = searchQuery;
-
-      const queryString = new URLSearchParams(params).toString();
-      const res = await fetch(`https://stack-project.onrender.com/api/blog?${queryString}`);
-      const data = await res.json();
-      
-      if (data.success) {
-        setPosts(data.data || []);
-        setTotalPages(data.pagination?.pages || 1);
-      }
-
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching posts:', error);
-      setLoading(false);
-    }
-  };
-
   const handleSearch = (e) => {
     e.preventDefault();
     setPage(1);
@@ -85,10 +135,10 @@ export default function Blog() {
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    return date.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
   };
 
@@ -99,10 +149,10 @@ export default function Blog() {
     >
       <div className="min-h-screen bg-slate-950 py-12">
         <div className="container-custom">
-          
+
           {/* Header */}
           <div className="mb-12 text-center">
-            <motion.h1 
+            <motion.h1
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               className="text-5xl md:text-6xl font-black mb-4"
@@ -111,7 +161,7 @@ export default function Blog() {
                 Blog & Noticias
               </span>
             </motion.h1>
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
@@ -124,7 +174,7 @@ export default function Blog() {
           {/* Search and Filters */}
           <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 mb-12">
             <div className="flex flex-col md:flex-row gap-4">
-              
+
               {/* Search */}
               <form onSubmit={handleSearch} className="flex-1">
                 <div className="relative">
@@ -237,7 +287,7 @@ export default function Blog() {
                       {post.tags && post.tags.length > 0 && (
                         <div className="mt-4 flex flex-wrap gap-2">
                           {post.tags.slice(0, 3).map((tag, idx) => (
-                            <span 
+                            <span
                               key={idx}
                               className="text-xs text-gray-500"
                             >
