@@ -213,12 +213,25 @@ export default function PostPage() {
               color: '#e5e7eb',
             }}
           >
-            <div 
-              className="text-gray-300 leading-relaxed space-y-4"
-              dangerouslySetInnerHTML={{ 
-                __html: post.content
-                  .split('\n')
-                  .map(line => {
+            <div
+              className="article-content text-gray-300 leading-relaxed space-y-4"
+              dangerouslySetInnerHTML={{
+                __html: (() => {
+                  let content = post.content;
+
+                  // Primero procesamos las imágenes Markdown: ![alt](url)
+                  content = content.replace(
+                    /!\[([^\]]*)\]\(([^)]+)\)/g,
+                    '<div class="my-8 rounded-xl overflow-hidden shadow-2xl"><img src="$2" alt="$1" class="w-full h-auto block" loading="lazy" /></div>'
+                  );
+
+                  // Luego procesamos línea por línea
+                  return content.split('\n').map(line => {
+                    // Si la línea contiene una imagen ya procesada, la dejamos tal cual
+                    if (line.includes('<img')) {
+                      return line;
+                    }
+
                     // Headers
                     if (line.startsWith('### ')) {
                       return `<h3 class="text-2xl font-bold text-white mt-8 mb-4">${line.replace('### ', '')}</h3>`;
@@ -229,23 +242,24 @@ export default function PostPage() {
                     if (line.startsWith('# ')) {
                       return `<h1 class="text-4xl font-bold text-white mt-12 mb-6">${line.replace('# ', '')}</h1>`;
                     }
+
                     // Bold
                     line = line.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-bold">$1</strong>');
                     // Italic
-                    line = line.replace(/\*(.*?)\*/g, '<em class="italic">$1</em>');
+                    line = line.replace(/\*(.*?)\*/g, '<em class="italic text-gray-400">$1</em>');
                     // Lists
                     if (line.startsWith('- ')) {
-                      return `<li class="ml-6">${line.replace('- ', '')}</li>`;
+                      return `<li class="ml-6 my-2 list-disc">${line.replace('- ', '')}</li>`;
                     }
                     // Empty lines
                     if (line.trim() === '') {
                       return '<br/>';
                     }
                     // Regular paragraphs
-                    return `<p class="text-gray-300 leading-relaxed">${line}</p>`;
-                  })
-                  .join('') 
-              }} 
+                    return `<p class="text-gray-300 leading-relaxed my-4">${line}</p>`;
+                  }).join('');
+                })()
+              }}
             />
           </motion.div>
 
@@ -299,6 +313,45 @@ export default function PostPage() {
             </Link>
           </motion.div>
         </article>
+
+        {/* Estilos para el contenido del artículo */}
+        <style jsx global>{`
+          .article-content img {
+            border-radius: 0.75rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+          }
+
+          .article-content ul {
+            list-style-type: disc;
+            padding-left: 1.5rem;
+            margin: 1rem 0;
+          }
+
+          .article-content li {
+            margin: 0.5rem 0;
+            color: #d1d5db;
+          }
+
+          .article-content strong {
+            color: #ffffff;
+            font-weight: 700;
+          }
+
+          .article-content em {
+            color: #9ca3af;
+            font-style: italic;
+          }
+
+          .article-content p {
+            margin-bottom: 1rem;
+          }
+
+          .article-content h1,
+          .article-content h2,
+          .article-content h3 {
+            scroll-margin-top: 2rem;
+          }
+        `}</style>
       </div>
     </Layout>
   );
