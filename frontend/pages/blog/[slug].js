@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { FiCalendar, FiUser, FiEye, FiArrowLeft, FiTag } from 'react-icons/fi';
 
-const API_URL = 'https://stack-project.onrender.com/api/blog';
+const API_URL = 'https://stack-backend-7jvd.onrender.com/api/blog';
 
 // SSR: Se ejecuta en el servidor antes de enviar la página
 export async function getServerSideProps({ params }) {

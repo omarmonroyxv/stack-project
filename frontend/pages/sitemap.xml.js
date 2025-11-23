@@ -3,7 +3,7 @@
 
 export async function getServerSideProps({ res }) {
   const baseUrl = 'https://stacklive.site';
-  const apiUrl = 'https://stack-project.onrender.com/api/blog';
+  const apiUrl = 'https://stack-backend-7jvd.onrender.com/api/blog';
 
   try {
     // Fetch todos los posts del blog

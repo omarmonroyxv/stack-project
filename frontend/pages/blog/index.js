@@ -4,7 +4,7 @@ import { FiSearch, FiChevronLeft, FiChevronRight, FiCalendar, FiUser } from 'rea
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 
-const API_URL = 'https://stack-project.onrender.com/api/blog';
+const API_URL = 'https://stack-backend-7jvd.onrender.com/api/blog';
 
 // SSR: Se ejecuta en el servidor antes de enviar la página
 export async function getServerSideProps({ query }) {
