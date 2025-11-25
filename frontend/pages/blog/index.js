@@ -249,11 +249,11 @@ export default function Blog({
                     className="group bg-white/5 backdrop-blur-xl border border-white/10 hover:border-white/20 rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer h-full"
                   >
                     {/* Cover Image */}
-                    {post.coverImage && (
+                    {post.featuredImage?.url && (
                       <div className="relative h-48 overflow-hidden">
                         <img
-                          src={post.coverImage}
-                          alt={post.title}
+                          src={post.featuredImage.url}
+                          alt={post.featuredImage.alt || post.title}
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 to-transparent opacity-60" />
