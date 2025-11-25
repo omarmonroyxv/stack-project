@@ -280,19 +280,62 @@ export default function Layout({ children, title, description }) {
 
               {/* Categories */}
               <div className="md:col-span-4">
-                <h3 className="text-white font-bold mb-6 text-lg">Contenido</h3>
+                <h3 className="text-white font-bold mb-6 text-lg">Información</h3>
                 <ul className="space-y-3">
-                  {['Noticias', 'Predicciones', 'Fichajes', 'Lesiones', 'Curiosidades'].map((category) => (
-                    <li key={category}>
-                      <Link 
-                        href="/blog"
-                        className="text-gray-400 hover:text-white transition-colors inline-flex items-center gap-2 group"
-                      >
-                        <span className="w-0 group-hover:w-6 h-px bg-gradient-to-r from-primary-400 to-blue-400 transition-all duration-300" />
-                        {category}
-                      </Link>
-                    </li>
-                  ))}
+                  <li>
+                    <Link
+                      href="/sobre-nosotros"
+                      className="text-gray-400 hover:text-white transition-colors inline-flex items-center gap-2 group"
+                    >
+                      <span className="w-0 group-hover:w-6 h-px bg-gradient-to-r from-primary-400 to-blue-400 transition-all duration-300" />
+                      Sobre Nosotros
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/contacto"
+                      className="text-gray-400 hover:text-white transition-colors inline-flex items-center gap-2 group"
+                    >
+                      <span className="w-0 group-hover:w-6 h-px bg-gradient-to-r from-primary-400 to-blue-400 transition-all duration-300" />
+                      Contacto
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/politica-privacidad"
+                      className="text-gray-400 hover:text-white transition-colors inline-flex items-center gap-2 group"
+                    >
+                      <span className="w-0 group-hover:w-6 h-px bg-gradient-to-r from-primary-400 to-blue-400 transition-all duration-300" />
+                      Política de Privacidad
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/politica-cookies"
+                      className="text-gray-400 hover:text-white transition-colors inline-flex items-center gap-2 group"
+                    >
+                      <span className="w-0 group-hover:w-6 h-px bg-gradient-to-r from-primary-400 to-blue-400 transition-all duration-300" />
+                      Política de Cookies
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/terminos-condiciones"
+                      className="text-gray-400 hover:text-white transition-colors inline-flex items-center gap-2 group"
+                    >
+                      <span className="w-0 group-hover:w-6 h-px bg-gradient-to-r from-primary-400 to-blue-400 transition-all duration-300" />
+                      Términos y Condiciones
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/aviso-legal"
+                      className="text-gray-400 hover:text-white transition-colors inline-flex items-center gap-2 group"
+                    >
+                      <span className="w-0 group-hover:w-6 h-px bg-gradient-to-r from-primary-400 to-blue-400 transition-all duration-300" />
+                      Aviso Legal
+                    </Link>
+                  </li>
                 </ul>
               </div>
             </div>
@@ -300,11 +343,13 @@ export default function Layout({ children, title, description }) {
             {/* Bottom Bar */}
             <div className="border-t border-white/5 mt-12 pt-8">
               <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-500">
-                <p>© 2024 Stack. Todos los derechos reservados.</p>
-                <div className="flex gap-6">
-                  <a href="/privacy" className="hover:text-white transition-colors">Privacidad</a>
-                  <a href="/terms" className="hover:text-white transition-colors">Términos</a>
-                  <a href="#" className="hover:text-white transition-colors">Contacto</a>
+                <p>© 2024 StackLive. Todos los derechos reservados.</p>
+                <div className="flex flex-wrap gap-4 md:gap-6 justify-center">
+                  <Link href="/politica-privacidad" className="hover:text-white transition-colors">Privacidad</Link>
+                  <Link href="/terminos-condiciones" className="hover:text-white transition-colors">Términos</Link>
+                  <Link href="/politica-cookies" className="hover:text-white transition-colors">Cookies</Link>
+                  <Link href="/aviso-legal" className="hover:text-white transition-colors">Aviso Legal</Link>
+                  <Link href="/contacto" className="hover:text-white transition-colors">Contacto</Link>
                 </div>
               </div>
             </div>
