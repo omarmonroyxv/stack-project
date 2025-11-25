@@ -23,7 +23,7 @@ export default function AdminDashboard() {
 
   const fetchArticles = async () => {
     try {
-      const response = await fetch('https://stack-project.onrender.com/api/blog');
+      const response = await fetch('https://stack-backend-7jvd.onrender.com/api/blog');
       const data = await response.json();
       setArticles(data.data || []);
     } catch (error) {
@@ -37,7 +37,7 @@ export default function AdminDashboard() {
     if (!confirm('¿Estás seguro de eliminar este artículo?')) return;
 
     try {
-      await fetch(`https://stack-project.onrender.com/api/blog/${slug}`, { method: 'DELETE' });
+      await fetch(`https://stack-backend-7jvd.onrender.com/api/blog/${slug}`, { method: 'DELETE' });
       fetchArticles();
     } catch (error) {
       console.error('Error deleting article:', error);
