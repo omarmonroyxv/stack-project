@@ -21,11 +21,20 @@ export default function ArticleEditor({ isEdit = false }) {
     content: '',
     category: 'noticias',
     tags: [],
-    coverImage: '',
-    author: '',
+    featuredImage: {
+      url: '',
+      alt: ''
+    },
+    author: {
+      name: '',
+      avatar: ''
+    },
     status: 'draft',
     featured: false,
-    metaDescription: ''
+    seo: {
+      metaTitle: '',
+      metaDescription: ''
+    }
   });
 
   const [tagInput, setTagInput] = useState('');
@@ -48,7 +57,7 @@ export default function ArticleEditor({ isEdit = false }) {
 
   const fetchArticle = async () => {
     try {
-      const response = await fetch(`https://stack-project.onrender.com/api/blog/${slug}`);
+      const response = await fetch(`https://stack-backend-7jvd.onrender.com/api/blog/${slug}`);
       const data = await response.json();
       if (data.success) {
         setFormData(data.data);
@@ -106,8 +115,8 @@ export default function ArticleEditor({ isEdit = false }) {
 
     try {
       const url = isEdit
-        ? `https://stack-project.onrender.com/api/blog/${slug}`
-        : 'https://stack-project.onrender.com/api/blog';
+        ? `https://stack-backend-7jvd.onrender.com/api/blog/${slug}`
+        : 'https://stack-backend-7jvd.onrender.com/api/blog';
       const method = isEdit ? 'PUT' : 'POST';
       
       const response = await fetch(url, {
@@ -354,15 +363,35 @@ export default function ArticleEditor({ isEdit = false }) {
                 </h3>
                 <input
                   type="url"
-                  name="coverImage"
-                  value={formData.coverImage}
-                  onChange={handleChange}
+                  name="featuredImage.url"
+                  value={formData.featuredImage?.url || ''}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    featuredImage: {
+                      ...prev.featuredImage,
+                      url: e.target.value
+                    }
+                  }))}
                   placeholder="https://ejemplo.com/imagen.jpg"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-gray-500 focus:border-primary-500 focus:outline-none transition-colors mb-2"
+                />
+                <input
+                  type="text"
+                  name="featuredImage.alt"
+                  value={formData.featuredImage?.alt || ''}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    featuredImage: {
+                      ...prev.featuredImage,
+                      alt: e.target.value
+                    }
+                  }))}
+                  placeholder="Descripción de la imagen (alt text)"
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-gray-500 focus:border-primary-500 focus:outline-none transition-colors"
                 />
-                {formData.coverImage && (
+                {formData.featuredImage?.url && (
                   <img
-                    src={formData.coverImage}
+                    src={formData.featuredImage.url}
                     alt="Preview"
                     className="mt-4 w-full h-32 object-cover rounded-lg"
                   />
@@ -374,10 +403,16 @@ export default function ArticleEditor({ isEdit = false }) {
                 <h3 className="text-lg font-bold text-white mb-4">Autor</h3>
                 <input
                   type="text"
-                  name="author"
-                  value={formData.author}
-                  onChange={handleChange}
-                  placeholder="Nombre del autor"
+                  name="author.name"
+                  value={formData.author?.name || ''}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    author: {
+                      ...prev.author,
+                      name: e.target.value
+                    }
+                  }))}
+                  placeholder="Nombre del autor (ej: Stack Editorial)"
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none transition-colors"
                 />
               </div>
@@ -385,11 +420,31 @@ export default function ArticleEditor({ isEdit = false }) {
               {/* Meta Description */}
               <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
                 <h3 className="text-lg font-bold text-white mb-4">SEO</h3>
+                <input
+                  type="text"
+                  name="seo.metaTitle"
+                  value={formData.seo?.metaTitle || ''}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    seo: {
+                      ...prev.seo,
+                      metaTitle: e.target.value
+                    }
+                  }))}
+                  placeholder="Meta título (opcional, máx 60 caracteres)"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-gray-500 focus:border-primary-500 focus:outline-none transition-colors mb-2"
+                />
                 <textarea
-                  name="metaDescription"
-                  value={formData.metaDescription}
-                  onChange={handleChange}
-                  placeholder="Meta descripción para SEO (opcional)"
+                  name="seo.metaDescription"
+                  value={formData.seo?.metaDescription || ''}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    seo: {
+                      ...prev.seo,
+                      metaDescription: e.target.value
+                    }
+                  }))}
+                  placeholder="Meta descripción (opcional, máx 160 caracteres)"
                   rows="3"
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-gray-500 focus:border-primary-500 focus:outline-none transition-colors resize-none"
                 />
