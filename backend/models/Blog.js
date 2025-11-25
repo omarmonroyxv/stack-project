@@ -237,22 +237,27 @@ blogSchema.pre('save', function(next) {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
   }
-  
+
   // Auto-calcular tiempo de lectura (250 palabras por minuto)
   if (this.content) {
     const wordCount = this.content.split(/\s+/).length;
     this.readTime = Math.ceil(wordCount / 250);
   }
-  
+
+  // Auto-establecer publishedAt cuando el status es 'published'
+  if (this.status === 'published' && !this.publishedAt) {
+    this.publishedAt = new Date();
+  }
+
   // Auto-generar meta title y description si no existen
   if (!this.seo.metaTitle) {
     this.seo.metaTitle = this.title.substring(0, 60);
   }
-  
+
   if (!this.seo.metaDescription) {
     this.seo.metaDescription = this.excerpt.substring(0, 160);
   }
-  
+
   next();
 });
 
