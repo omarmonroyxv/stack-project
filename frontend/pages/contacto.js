@@ -75,10 +75,10 @@ export default function Contacto() {
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: window.innerWidth > 768 ? '1fr 1fr' : '1fr',
+          gridTemplateColumns: '1fr',
           gap: '30px',
           marginBottom: '50px'
-        }}>
+        }} className="md:grid-cols-2">
           <div style={{
             backgroundColor: '#f8f9fa',
             padding: '30px',

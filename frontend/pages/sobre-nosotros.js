@@ -37,10 +37,10 @@ export default function SobreNosotros() {
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: window.innerWidth > 768 ? 'repeat(2, 1fr)' : '1fr',
+            gridTemplateColumns: '1fr',
             gap: '25px',
             marginBottom: '30px'
-          }}>
+          }} className="md:grid-cols-2">
             <div style={{
               padding: '25px',
               backgroundColor: '#fff',
