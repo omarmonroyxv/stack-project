@@ -64,52 +64,66 @@
 }
 
 /* Google Translate Widget Styling */
-.translate-widget {
+#google_translate_element {
   display: inline-block;
 }
 
-.translate-widget .goog-te-gadget {
+/* Style the Google Translate dropdown */
+.goog-te-gadget {
   font-family: inherit !important;
-  font-size: 0 !important;
+  color: #ffffff !important;
 }
 
-.translate-widget .goog-te-gadget-simple {
+.goog-te-gadget .goog-te-combo {
   background-color: rgba(255, 255, 255, 0.05) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  padding: 8px 16px !important;
-  border-radius: 12px !important;
-  font-size: 14px !important;
+  padding: 8px 12px !important;
+  border-radius: 8px !important;
   color: #ffffff !important;
-  transition: all 0.3s ease !important;
+  font-size: 14px !important;
+  outline: none !important;
+  cursor: pointer !important;
+  min-width: 150px !important;
 }
 
-.translate-widget .goog-te-gadget-simple:hover {
+.goog-te-gadget .goog-te-combo:hover {
   background-color: rgba(255, 255, 255, 0.1) !important;
   border-color: rgba(16, 185, 129, 0.3) !important;
 }
 
-.translate-widget .goog-te-gadget-simple .goog-te-menu-value {
+.goog-te-gadget .goog-te-combo option {
+  background-color: #1e293b !important;
   color: #ffffff !important;
+  padding: 8px !important;
 }
 
-.translate-widget .goog-te-gadget-simple .goog-te-menu-value span {
-  color: #ffffff !important;
-  border-left-color: rgba(255, 255, 255, 0.2) !important;
-}
-
-.translate-widget .goog-te-gadget-icon {
+/* Hide the "Powered by" text */
+.goog-te-gadget span {
   display: none !important;
 }
 
-/* Hide Google Translate top bar */
-.goog-te-banner-frame {
+.goog-te-gadget > div {
+  display: inline-block !important;
+}
+
+/* Hide Google Translate top banner */
+.goog-te-banner-frame.skiptranslate {
   display: none !important;
 }
 
 body {
   top: 0 !important;
+  position: static !important;
 }
 
-.skiptranslate {
-  display: inline-block !important;
+/* Fix body when translated */
+body.translated-ltr {
+  top: 0 !important;
+  position: static !important;
+}
+
+/* Style the iframe when translation is active */
+.skiptranslate iframe {
+  visibility: hidden !important;
+  display: none !important;
 }

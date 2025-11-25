@@ -143,7 +143,7 @@ export default function Layout({ children, title, description }) {
               {/* Language Selector & CTA */}
               <div className="hidden md:flex items-center gap-4">
                 {/* Google Translate */}
-                <div id="google_translate_element" className="translate-widget"></div>
+                <div id="google_translate_element"></div>
 
                 <Link href="/blog">
                   <motion.button

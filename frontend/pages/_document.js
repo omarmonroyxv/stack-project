@@ -38,7 +38,7 @@ export default function Document() {
           }}
         />
 
-        {/* Google Translate */}
+        {/* Google Translate - New Version */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -46,16 +46,15 @@ export default function Document() {
                 new google.translate.TranslateElement({
                   pageLanguage: 'es',
                   includedLanguages: 'en,fr,de,it,pt,nl,pl,ru,zh-CN,ja,ko,ar,tr',
-                  layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
-                  autoDisplay: false
+                  layout: google.translate.TranslateElement.InlineLayout.HORIZONTAL
                 }, 'google_translate_element');
               }
             `
           }}
         />
-        <script async src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" />
+        <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
       </Head>
-      <body className="notranslate">
+      <body>
         <Main />
         <NextScript />
       </body>
