@@ -118,29 +118,40 @@ export default function ArticleEditor({ isEdit = false }) {
         ? `https://stack-backend-7jvd.onrender.com/api/blog/${slug}`
         : 'https://stack-backend-7jvd.onrender.com/api/blog';
       const method = isEdit ? 'PUT' : 'POST';
-      
+
+      // Limpiar datos antes de enviar
+      const cleanData = {
+        ...formData,
+        status,
+        // Asegurar que los objetos anidados tengan valores válidos
+        featuredImage: formData.featuredImage?.url ? formData.featuredImage : undefined,
+        author: formData.author?.name ? formData.author : { name: 'Stack Editorial' },
+        seo: {
+          metaTitle: formData.seo?.metaTitle || formData.title,
+          metaDescription: formData.seo?.metaDescription || formData.excerpt
+        }
+      };
+
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...formData,
-          status
-        })
+        body: JSON.stringify(cleanData)
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         alert(`Artículo ${status === 'published' ? 'publicado' : 'guardado'} exitosamente`);
         router.push('/admin');
       } else {
-        alert('Error al guardar: ' + data.message);
+        console.error('Error response:', data);
+        alert('Error al guardar: ' + (data.error || data.message || 'Error desconocido'));
       }
     } catch (error) {
       console.error('Error saving article:', error);
-      alert('Error al guardar el artículo');
+      alert('Error al guardar el artículo: ' + error.message);
     } finally {
       setSaving(false);
     }
