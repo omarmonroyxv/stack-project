@@ -37,8 +37,25 @@ export default function Document() {
             `
           }}
         />
+
+        {/* Google Translate */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              function googleTranslateElementInit() {
+                new google.translate.TranslateElement({
+                  pageLanguage: 'es',
+                  includedLanguages: 'en,fr,de,it,pt,nl,pl,ru,zh-CN,ja,ko,ar,tr',
+                  layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+                  autoDisplay: false
+                }, 'google_translate_element');
+              }
+            `
+          }}
+        />
+        <script async src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" />
       </Head>
-      <body>
+      <body className="notranslate">
         <Main />
         <NextScript />
       </body>

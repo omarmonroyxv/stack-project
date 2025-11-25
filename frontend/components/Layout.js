@@ -140,8 +140,11 @@ export default function Layout({ children, title, description }) {
                 })}
               </div>
 
-              {/* CTA Button */}
-              <div className="hidden md:block">
+              {/* Language Selector & CTA */}
+              <div className="hidden md:flex items-center gap-4">
+                {/* Google Translate */}
+                <div id="google_translate_element" className="translate-widget"></div>
+
                 <Link href="/blog">
                   <motion.button
                     whileHover={{ scale: 1.05 }}
