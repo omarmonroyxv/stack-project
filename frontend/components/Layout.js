@@ -42,17 +42,24 @@ export default function Layout({ children, title, description }) {
         <title>{title ? `${title} | Stack` : 'Stack - Resultados de Fútbol en Vivo'}</title>
         <meta name="description" content={description || 'La mejor plataforma para seguir resultados de fútbol en vivo, noticias, análisis y predicciones.'} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
-        
+
+        {/* Favicons */}
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon.svg" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon.svg" />
+        <link rel="apple-touch-icon" href="/favicon.svg" />
+
         {/* Open Graph */}
         <meta property="og:title" content={title || 'Stack'} />
         <meta property="og:description" content={description || 'Resultados de fútbol en vivo'} />
         <meta property="og:type" content="website" />
-        
+        <meta property="og:image" content="/favicon.svg" />
+
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={title || 'Stack'} />
         <meta name="twitter:description" content={description || 'Resultados de fútbol en vivo'} />
+        <meta name="twitter:image" content="/favicon.svg" />
       </Head>
 
       <div className="min-h-screen flex flex-col bg-slate-950">
