@@ -1,6 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  i18n: {
+    locales: ['es', 'en', 'fr', 'de', 'it', 'pt'],
+    defaultLocale: 'es',
+    localeDetection: true,
+  },
   images: {
     domains: ['media.api-sports.io', 'localhost'],
     unoptimized: true

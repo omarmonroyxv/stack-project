@@ -3,11 +3,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FiHome, 
-  FiZap, 
-  FiBookOpen, 
-  FiMenu, 
+import LanguageSelector from './LanguageSelector';
+import {
+  FiHome,
+  FiZap,
+  FiBookOpen,
+  FiMenu,
   FiX,
   FiTwitter,
   FiFacebook,
@@ -142,8 +143,7 @@ export default function Layout({ children, title, description }) {
 
               {/* Language Selector & CTA */}
               <div className="hidden md:flex items-center gap-4">
-                {/* Google Translate */}
-                <div id="google_translate_element"></div>
+                <LanguageSelector />
 
                 <Link href="/blog">
                   <motion.button

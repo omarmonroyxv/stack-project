@@ -1,8 +1,10 @@
 import { Html, Head, Main, NextScript } from 'next/document'
 
-export default function Document() {
+export default function Document(props) {
+  const { locale } = props.__NEXT_DATA__;
+
   return (
-    <Html lang="es">
+    <Html lang={locale}>
       <Head>
         {/* Google Analytics */}
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-MKJTSMELK0" />
@@ -37,22 +39,6 @@ export default function Document() {
             `
           }}
         />
-
-        {/* Google Translate - New Version */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              function googleTranslateElementInit() {
-                new google.translate.TranslateElement({
-                  pageLanguage: 'es',
-                  includedLanguages: 'en,fr,de,it,pt,nl,pl,ru,zh-CN,ja,ko,ar,tr',
-                  layout: google.translate.TranslateElement.InlineLayout.HORIZONTAL
-                }, 'google_translate_element');
-              }
-            `
-          }}
-        />
-        <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
       </Head>
       <body>
         <Main />
