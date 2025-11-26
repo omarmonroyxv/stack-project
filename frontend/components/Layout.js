@@ -178,11 +178,11 @@ export default function Layout({ children, title, description }) {
                   exit={{ opacity: 0, height: 0 }}
                   className="md:hidden overflow-hidden"
                 >
-                  <div className="py-6 space-y-2 border-t border-white/5">
+                  <div className="py-6 space-y-3 border-t border-white/5">
                     {navigation.map((item) => {
                       const Icon = item.icon;
                       const active = isActive(item.href);
-                      
+
                       return (
                         <Link
                           key={item.name}
@@ -207,6 +207,21 @@ export default function Layout({ children, title, description }) {
                         </Link>
                       );
                     })}
+
+                    {/* Language Selector - Mobile */}
+                    <div className="px-4 pt-4 border-t border-white/10">
+                      <p className="text-xs text-gray-500 font-semibold uppercase mb-3">Idioma</p>
+                      <LanguageSelector />
+                    </div>
+
+                    {/* CTA Button - Mobile */}
+                    <div className="px-4">
+                      <Link href="/blog" onClick={() => setMobileMenuOpen(false)}>
+                        <button className="w-full px-6 py-3 bg-gradient-to-r from-primary-600 to-blue-600 hover:from-primary-500 hover:to-blue-500 text-white font-bold rounded-xl shadow-lg shadow-primary-500/30 transition-all duration-300">
+                          Ver Blog
+                        </button>
+                      </Link>
+                    </div>
                   </div>
                 </motion.div>
               )}
