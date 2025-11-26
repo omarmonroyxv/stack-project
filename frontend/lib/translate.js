@@ -1,15 +1,26 @@
-// Simple translation service using MyMemory API (free, no API key needed)
+// Translation service using Google Translate (free, no API key, no limits)
 export async function translateText(text, targetLang) {
   if (!text || targetLang === 'es') return text;
 
   try {
-    const response = await fetch(
-      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=es|${targetLang}`
-    );
+    // Using Google Translate via translate.googleapis.com (free, no key needed for client-side)
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=es&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+
+    console.log('Calling Google Translate:', { text: text.substring(0, 50), targetLang });
+
+    const response = await fetch(url);
     const data = await response.json();
 
-    if (data.responseData && data.responseData.translatedText) {
-      return data.responseData.translatedText;
+    // Google Translate returns: [[["translated","original",null,null,3]],null,"es"]
+    if (data && data[0] && Array.isArray(data[0])) {
+      const translated = data[0].map(item => item[0]).join('');
+
+      console.log('Translation result:', {
+        original: text.substring(0, 50),
+        translated: translated.substring(0, 50)
+      });
+
+      return translated;
     }
 
     return text;

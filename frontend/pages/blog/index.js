@@ -80,20 +80,45 @@ export default function Blog({
   // Traducir posts cuando cambia el idioma
   useEffect(() => {
     async function translatePosts() {
+      console.log('Translation effect triggered:', { locale, postsCount: posts.length });
+
       if (locale === 'es' || !posts.length) {
+        console.log('Skipping translation (Spanish or no posts)');
         setTranslatedPosts(posts);
         return;
       }
 
-      const translated = await Promise.all(
-        posts.map(async (post) => ({
-          ...post,
-          title: await translateWithCache(post.title, locale),
-          excerpt: await translateWithCache(post.excerpt, locale),
-        }))
-      );
+      console.log('Starting translation to:', locale);
+      setLoading(true);
 
-      setTranslatedPosts(translated);
+      try {
+        const translated = await Promise.all(
+          posts.map(async (post) => {
+            const translatedTitle = await translateWithCache(post.title, locale);
+            const translatedExcerpt = await translateWithCache(post.excerpt, locale);
+
+            console.log('Translated:', {
+              original: post.title,
+              translated: translatedTitle,
+              locale
+            });
+
+            return {
+              ...post,
+              title: translatedTitle,
+              excerpt: translatedExcerpt,
+            };
+          })
+        );
+
+        setTranslatedPosts(translated);
+        console.log('Translation complete');
+      } catch (error) {
+        console.error('Translation error:', error);
+        setTranslatedPosts(posts);
+      } finally {
+        setLoading(false);
+      }
     }
 
     translatePosts();

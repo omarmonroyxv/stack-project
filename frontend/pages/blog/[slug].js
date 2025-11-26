@@ -1,8 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { FiCalendar, FiUser, FiEye, FiArrowLeft, FiTag } from 'react-icons/fi';
+import { translateWithCache } from '../../lib/translate';
 
 const API_URL = 'https://stack-backend-7jvd.onrender.com/api/blog';
 
@@ -39,6 +41,46 @@ export async function getServerSideProps({ params }) {
 }
 
 export default function PostPage({ post }) {
+  const router = useRouter();
+  const { locale } = router;
+  const [translatedPost, setTranslatedPost] = useState(post);
+  const [isTranslating, setIsTranslating] = useState(false);
+
+  // Translate post when locale changes
+  useEffect(() => {
+    async function translatePost() {
+      if (!post || locale === 'es') {
+        setTranslatedPost(post);
+        return;
+      }
+
+      console.log('Translating post to:', locale);
+      setIsTranslating(true);
+
+      try {
+        const translatedTitle = await translateWithCache(post.title, locale);
+        const translatedExcerpt = post.excerpt ? await translateWithCache(post.excerpt, locale) : '';
+        const translatedContent = await translateWithCache(post.content, locale);
+
+        setTranslatedPost({
+          ...post,
+          title: translatedTitle,
+          excerpt: translatedExcerpt,
+          content: translatedContent,
+        });
+
+        console.log('Post translation complete');
+      } catch (error) {
+        console.error('Translation error:', error);
+        setTranslatedPost(post);
+      } finally {
+        setIsTranslating(false);
+      }
+    }
+
+    translatePost();
+  }, [post, locale]);
+
   // Load Ezoic ads when component mounts
   useEffect(() => {
     if (post && typeof window !== 'undefined' && window.ezstandalone) {
@@ -90,7 +132,7 @@ export default function PostPage({ post }) {
   }
 
   return (
-    <Layout title={post.title} description={post.excerpt}>
+    <Layout title={translatedPost?.title || post?.title} description={translatedPost?.excerpt || post?.excerpt}>
       <div className="min-h-screen bg-slate-950">
 
         {/* Back Button */}
@@ -116,7 +158,7 @@ export default function PostPage({ post }) {
             >
               <img
                 src={post.coverImage}
-                alt={post.title}
+                alt={translatedPost?.title || post.title}
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950 to-transparent" />
@@ -147,18 +189,18 @@ export default function PostPage({ post }) {
             transition={{ delay: 0.2 }}
             className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-6 leading-tight"
           >
-            {post.title}
+            {isTranslating ? post.title : (translatedPost?.title || post.title)}
           </motion.h1>
 
           {/* Excerpt */}
-          {post.excerpt && (
+          {(translatedPost?.excerpt || post.excerpt) && (
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
               className="text-xl text-gray-400 mb-8 leading-relaxed"
             >
-              {post.excerpt}
+              {isTranslating ? post.excerpt : (translatedPost?.excerpt || post.excerpt)}
             </motion.p>
           )}
 
@@ -204,7 +246,7 @@ export default function PostPage({ post }) {
               className="article-content text-gray-300 leading-relaxed space-y-4"
               dangerouslySetInnerHTML={{
                 __html: (() => {
-                  let content = post.content;
+                  let content = isTranslating ? post.content : (translatedPost?.content || post.content);
 
                   // Primero procesamos las imágenes Markdown: ![alt](url)
                   content = content.replace(
