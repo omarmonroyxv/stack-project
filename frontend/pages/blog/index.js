@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
+import TranslatedText from '../../components/TranslatedText';
 import { FiSearch, FiChevronLeft, FiChevronRight, FiCalendar, FiUser } from 'react-icons/fi';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { translateWithCache } from '../../lib/translate';
 
 const API_URL = 'https://stack-backend-7jvd.onrender.com/api/blog';
 
@@ -64,12 +67,37 @@ export default function Blog({
   initialCategory,
   initialSearch
 }) {
+  const router = useRouter();
+  const { locale } = router;
   const [posts, setPosts] = useState(initialPosts);
+  const [translatedPosts, setTranslatedPosts] = useState(initialPosts);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(initialPage);
   const [totalPages, setTotalPages] = useState(initialTotalPages);
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [searchQuery, setSearchQuery] = useState(initialSearch);
+
+  // Traducir posts cuando cambia el idioma
+  useEffect(() => {
+    async function translatePosts() {
+      if (locale === 'es' || !posts.length) {
+        setTranslatedPosts(posts);
+        return;
+      }
+
+      const translated = await Promise.all(
+        posts.map(async (post) => ({
+          ...post,
+          title: await translateWithCache(post.title, locale),
+          excerpt: await translateWithCache(post.excerpt, locale),
+        }))
+      );
+
+      setTranslatedPosts(translated);
+    }
+
+    translatePosts();
+  }, [posts, locale]);
 
   const categories = [
     { value: '', label: 'Todas', icon: '📂' },
@@ -238,9 +266,9 @@ export default function Blog({
                 </div>
               ))}
             </div>
-          ) : posts.length > 0 ? (
+          ) : translatedPosts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {posts.map((post) => (
+              {translatedPosts.map((post) => (
                 <Link key={post._id} href={`/blog/${post.slug}`}>
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
