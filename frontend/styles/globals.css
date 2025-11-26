@@ -1,6 +1,10 @@
+/* Tailwind CSS directives - These are valid Tailwind imports */
+/* stylelint-disable at-rule-no-unknown */
+/* postcss-enable-all */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+/* stylelint-enable at-rule-no-unknown */
 
 @layer base {
   body {
